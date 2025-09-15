@@ -4,7 +4,7 @@
 use serde_json;
 
 #[cfg(feature = "json")]
-use crate::data::{DataImporter, DataExporter, ImportError, ExportError, SourceInfo};
+use crate::data::{DataExporter, DataImporter, ExportError, ImportError, SourceInfo};
 
 #[cfg(feature = "json")]
 use crate::core::Card;
@@ -73,6 +73,6 @@ impl DataExporter for JsonExporter {
     }
 
     fn export_card(&self, card: &Card) -> Result<(), ExportError> {
-        self.export_cards(&[card.clone()])
+        self.export_cards(std::slice::from_ref(card))
     }
 }

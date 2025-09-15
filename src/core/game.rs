@@ -1,6 +1,10 @@
 //! Main game logic and state management
 
-use crate::core::{player::Player, card::{Card, CardId}, deck::Deck};
+use crate::core::{
+    card::{Card, CardId},
+    deck::Deck,
+    player::Player,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -29,7 +33,9 @@ pub enum GameState {
     /// Game is actively being played
     InProgress,
     /// Game has ended
-    Finished { winner: Option<crate::core::player::PlayerId> },
+    Finished {
+        winner: Option<crate::core::player::PlayerId>,
+    },
     /// Game was abandoned or cancelled
     Cancelled,
 }
@@ -80,27 +86,60 @@ pub enum GameEvent {
     /// Game started
     GameStarted,
     /// Turn started
-    TurnStarted { player_id: crate::core::player::PlayerId, turn_number: u32 },
+    TurnStarted {
+        player_id: crate::core::player::PlayerId,
+        turn_number: u32,
+    },
     /// Card was drawn
-    CardDrawn { player_id: crate::core::player::PlayerId, card_id: Option<CardId> },
+    CardDrawn {
+        player_id: crate::core::player::PlayerId,
+        card_id: Option<CardId>,
+    },
     /// Card was played
-    CardPlayed { player_id: crate::core::player::PlayerId, card_id: CardId },
+    CardPlayed {
+        player_id: crate::core::player::PlayerId,
+        card_id: CardId,
+    },
     /// Pokemon was played to bench
-    PokemonBenched { player_id: crate::core::player::PlayerId, card_id: CardId },
+    PokemonBenched {
+        player_id: crate::core::player::PlayerId,
+        card_id: CardId,
+    },
     /// Energy was attached
-    EnergyAttached { player_id: crate::core::player::PlayerId, energy_id: CardId, pokemon_id: CardId },
+    EnergyAttached {
+        player_id: crate::core::player::PlayerId,
+        energy_id: CardId,
+        pokemon_id: CardId,
+    },
     /// Attack was used
-    AttackUsed { player_id: crate::core::player::PlayerId, pokemon_id: CardId, attack_name: String },
+    AttackUsed {
+        player_id: crate::core::player::PlayerId,
+        pokemon_id: CardId,
+        attack_name: String,
+    },
     /// Damage was dealt
-    DamageDealt { player_id: crate::core::player::PlayerId, pokemon_id: CardId, damage: u32 },
+    DamageDealt {
+        player_id: crate::core::player::PlayerId,
+        pokemon_id: CardId,
+        damage: u32,
+    },
     /// Pokemon was knocked out
-    PokemonKnockedOut { player_id: crate::core::player::PlayerId, pokemon_id: CardId },
+    PokemonKnockedOut {
+        player_id: crate::core::player::PlayerId,
+        pokemon_id: CardId,
+    },
     /// Prize card was taken
-    PrizeTaken { player_id: crate::core::player::PlayerId },
+    PrizeTaken {
+        player_id: crate::core::player::PlayerId,
+    },
     /// Turn ended
-    TurnEnded { player_id: crate::core::player::PlayerId },
+    TurnEnded {
+        player_id: crate::core::player::PlayerId,
+    },
     /// Game ended
-    GameEnded { winner: Option<crate::core::player::PlayerId> },
+    GameEnded {
+        winner: Option<crate::core::player::PlayerId>,
+    },
 }
 
 impl Default for GameRules {
@@ -151,7 +190,7 @@ impl Game {
 
         // Set prize cards according to game rules
         player.prize_cards = self.rules.prize_cards;
-        
+
         let player_id = player.id;
         self.players.insert(player_id, player);
         self.turn_order.push(player_id);
@@ -160,13 +199,17 @@ impl Game {
     }
 
     /// Set a player's deck
-    pub fn set_player_deck(&mut self, player_id: crate::core::player::PlayerId, deck: Deck) -> Result<(), String> {
+    pub fn set_player_deck(
+        &mut self,
+        player_id: crate::core::player::PlayerId,
+        deck: Deck,
+    ) -> Result<(), String> {
         if self.state != GameState::Setup {
             return Err("Cannot set deck after game has started".to_string());
         }
 
         // Add deck cards to the game's card database
-        for &card_id in deck.cards.keys() {
+        for &_card_id in deck.cards.keys() {
             // In a real implementation, you'd load the card data here
             // For now, we'll assume the cards are already in the database
         }
@@ -218,7 +261,7 @@ impl Game {
         }
 
         let current_player_id = self.get_current_player_id()?;
-        
+
         if let Some(player) = self.players.get_mut(&current_player_id) {
             player.start_turn();
             player.draw_card(); // Draw card at beginning of turn
@@ -245,12 +288,14 @@ impl Game {
         }
 
         let current_player_id = self.get_current_player_id()?;
-        
+
         if let Some(player) = self.players.get_mut(&current_player_id) {
             player.end_turn();
         }
 
-        self.add_event(GameEvent::TurnEnded { player_id: current_player_id });
+        self.add_event(GameEvent::TurnEnded {
+            player_id: current_player_id,
+        });
 
         // Check for win conditions
         if self.check_win_conditions()? {
@@ -259,7 +304,7 @@ impl Game {
 
         // Move to next player
         self.current_player_index = (self.current_player_index + 1) % self.turn_order.len();
-        
+
         // Increment turn number when we complete a full round
         if self.current_player_index == 0 {
             self.turn_number += 1;
@@ -272,7 +317,8 @@ impl Game {
 
     /// Get the current player's ID
     pub fn get_current_player_id(&self) -> Result<crate::core::player::PlayerId, String> {
-        self.turn_order.get(self.current_player_index)
+        self.turn_order
+            .get(self.current_player_index)
             .copied()
             .ok_or_else(|| "No current player".to_string())
     }
@@ -280,14 +326,16 @@ impl Game {
     /// Get the current player
     pub fn get_current_player(&self) -> Result<&Player, String> {
         let player_id = self.get_current_player_id()?;
-        self.players.get(&player_id)
+        self.players
+            .get(&player_id)
             .ok_or_else(|| "Current player not found".to_string())
     }
 
     /// Get a mutable reference to the current player
     pub fn get_current_player_mut(&mut self) -> Result<&mut Player, String> {
         let player_id = self.get_current_player_id()?;
-        self.players.get_mut(&player_id)
+        self.players
+            .get_mut(&player_id)
             .ok_or_else(|| "Current player not found".to_string())
     }
 
@@ -314,11 +362,13 @@ impl Game {
                 winner = Some(player_id);
                 break;
             }
-            
+
             // Check if opponent has lost
-            let opponent_lost = self.players.values()
+            let opponent_lost = self
+                .players
+                .values()
                 .any(|p| p.id != player_id && p.has_lost());
-            
+
             if opponent_lost {
                 winner = Some(player_id);
                 break;
@@ -326,8 +376,12 @@ impl Game {
         }
 
         if let Some(winner_id) = winner {
-            self.state = GameState::Finished { winner: Some(winner_id) };
-            self.add_event(GameEvent::GameEnded { winner: Some(winner_id) });
+            self.state = GameState::Finished {
+                winner: Some(winner_id),
+            };
+            self.add_event(GameEvent::GameEnded {
+                winner: Some(winner_id),
+            });
             return Ok(true);
         }
 
@@ -356,7 +410,9 @@ impl Game {
 
     /// Check if it's a specific player's turn
     pub fn is_player_turn(&self, player_id: crate::core::player::PlayerId) -> bool {
-        self.get_current_player_id().map(|id| id == player_id).unwrap_or(false)
+        self.get_current_player_id()
+            .map(|id| id == player_id)
+            .unwrap_or(false)
     }
 
     /// Get all players
@@ -370,7 +426,10 @@ impl Game {
     }
 
     /// Get a specific player (mutable)
-    pub fn get_player_mut(&mut self, player_id: crate::core::player::PlayerId) -> Option<&mut Player> {
+    pub fn get_player_mut(
+        &mut self,
+        player_id: crate::core::player::PlayerId,
+    ) -> Option<&mut Player> {
         self.players.get_mut(&player_id)
     }
 
@@ -395,7 +454,6 @@ impl Default for Game {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::deck::Deck;
 
     #[test]
     fn test_create_game() {
@@ -461,10 +519,10 @@ mod tests {
     #[test]
     fn test_game_events() {
         let mut game = Game::new();
-        
+
         game.add_event(GameEvent::GameStarted);
         assert_eq!(game.history.len(), 1);
-        
+
         match &game.history[0] {
             GameEvent::GameStarted => (),
             _ => panic!("Expected GameStarted event"),

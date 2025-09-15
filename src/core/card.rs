@@ -260,7 +260,10 @@ mod tests {
         );
 
         assert!(lightning_energy.is_energy());
-        assert_eq!(lightning_energy.get_energy_type(), Some(&EnergyType::Lightning));
+        assert_eq!(
+            lightning_energy.get_energy_type(),
+            Some(&EnergyType::Lightning)
+        );
     }
 
     #[test]
@@ -285,7 +288,9 @@ mod tests {
             name: "Thundershock".to_string(),
             cost: vec![EnergyType::Lightning, EnergyType::Colorless],
             damage: 30,
-            effect: Some("Flip a coin. If heads, the Defending Pokémon is now Paralyzed.".to_string()),
+            effect: Some(
+                "Flip a coin. If heads, the Defending Pokémon is now Paralyzed.".to_string(),
+            ),
         };
 
         pikachu.add_attack(thundershock);

@@ -31,7 +31,11 @@ pub enum DeckValidationError {
     /// Too many cards in deck
     TooManyCards { current: usize, maximum: usize },
     /// Too many copies of a single card
-    TooManyCopies { card_name: String, copies: u32, limit: u32 },
+    TooManyCopies {
+        card_name: String,
+        copies: u32,
+        limit: u32,
+    },
     /// Invalid card for the format
     InvalidCard { card_name: String, format: String },
     /// Missing required cards (e.g., no basic Pokemon)
@@ -118,7 +122,10 @@ impl Deck {
     }
 
     /// Validate the deck according to standard PTCG rules
-    pub fn validate(&self, card_database: &HashMap<CardId, Card>) -> Result<(), Vec<DeckValidationError>> {
+    pub fn validate(
+        &self,
+        card_database: &HashMap<CardId, Card>,
+    ) -> Result<(), Vec<DeckValidationError>> {
         let mut errors = Vec::new();
         let total = self.total_cards();
 
@@ -127,15 +134,24 @@ impl Deck {
             "Standard" | "Expanded" => {
                 if total != 60 {
                     if total < 60 {
-                        errors.push(DeckValidationError::TooFewCards { current: total as usize, minimum: 60 });
+                        errors.push(DeckValidationError::TooFewCards {
+                            current: total as usize,
+                            minimum: 60,
+                        });
                     } else {
-                        errors.push(DeckValidationError::TooManyCards { current: total as usize, maximum: 60 });
+                        errors.push(DeckValidationError::TooManyCards {
+                            current: total as usize,
+                            maximum: 60,
+                        });
                     }
                 }
             }
             "Limited" => {
                 if total < 40 {
-                    errors.push(DeckValidationError::TooFewCards { current: total as usize, minimum: 40 });
+                    errors.push(DeckValidationError::TooFewCards {
+                        current: total as usize,
+                        minimum: 40,
+                    });
                 }
             }
             _ => {
@@ -145,13 +161,16 @@ impl Deck {
 
         // Check card copy limits and basic Pokemon requirement
         let mut has_basic_pokemon = false;
-        
+
         for (&card_id, &quantity) in &self.cards {
             if let Some(card) = card_database.get(&card_id) {
                 // Check copy limit (standard: 4 copies max, except basic energy)
-                let max_copies = if let Some(energy_type) = card.get_energy_type() {
+                let max_copies = if let Some(_energy_type) = card.get_energy_type() {
                     // Basic energy cards have no limit
-                    if matches!(card.card_type, crate::core::card::CardType::Energy { is_basic: true, .. }) {
+                    if matches!(
+                        card.card_type,
+                        crate::core::card::CardType::Energy { is_basic: true, .. }
+                    ) {
                         u32::MAX
                     } else {
                         4
@@ -169,7 +188,11 @@ impl Deck {
                 }
 
                 // Check for basic Pokemon
-                if let crate::core::card::CardType::Pokemon { stage: crate::core::card::EvolutionStage::Basic, .. } = card.card_type {
+                if let crate::core::card::CardType::Pokemon {
+                    stage: crate::core::card::EvolutionStage::Basic,
+                    ..
+                } = card.card_type
+                {
                     has_basic_pokemon = true;
                 }
             }
@@ -193,27 +216,27 @@ impl Deck {
     pub fn shuffle(&self) -> Vec<CardId> {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut cards = self.to_card_list();
-        
+
         // Simple shuffle algorithm (in a real implementation, you'd use a proper RNG)
         let mut hasher = DefaultHasher::new();
         self.id.hash(&mut hasher);
         let seed = hasher.finish();
-        
+
         // Fisher-Yates shuffle with simple PRNG
         for i in (1..cards.len()).rev() {
             let j = (seed.wrapping_mul(i as u64 + 1)) % (i as u64 + 1);
             cards.swap(i, j as usize);
         }
-        
+
         cards
     }
 
     /// Get deck statistics
     pub fn get_statistics(&self, card_database: &HashMap<CardId, Card>) -> DeckStatistics {
         let mut stats = DeckStatistics::default();
-        
+
         for (&card_id, &quantity) in &self.cards {
             if let Some(card) = card_database.get(&card_id) {
                 match &card.card_type {
@@ -229,7 +252,7 @@ impl Deck {
                 }
             }
         }
-        
+
         stats.total_cards = self.total_cards();
         stats.unique_cards = self.unique_cards() as u32;
         stats
@@ -297,7 +320,7 @@ pub struct DeckStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::card::{Card, CardType, CardRarity, EnergyType, EvolutionStage};
+    use crate::core::card::{Card, CardRarity, CardType, EnergyType, EvolutionStage};
 
     fn create_test_card(name: &str, card_type: CardType) -> Card {
         Card::new(
@@ -341,23 +364,29 @@ mod tests {
         let mut card_db = HashMap::new();
 
         // Create a basic Pokemon
-        let basic_pokemon = create_test_card("Pikachu", CardType::Pokemon {
-            species: "Pikachu".to_string(),
-            hp: 60,
-            retreat_cost: 1,
-            weakness: None,
-            resistance: None,
-            stage: EvolutionStage::Basic,
-            evolves_from: None,
-        });
+        let basic_pokemon = create_test_card(
+            "Pikachu",
+            CardType::Pokemon {
+                species: "Pikachu".to_string(),
+                hp: 60,
+                retreat_cost: 1,
+                weakness: None,
+                resistance: None,
+                stage: EvolutionStage::Basic,
+                evolves_from: None,
+            },
+        );
         let basic_id = basic_pokemon.id;
         card_db.insert(basic_id, basic_pokemon);
 
         // Create basic energy
-        let energy = create_test_card("Lightning Energy", CardType::Energy {
-            energy_type: EnergyType::Lightning,
-            is_basic: true,
-        });
+        let energy = create_test_card(
+            "Lightning Energy",
+            CardType::Energy {
+                energy_type: EnergyType::Lightning,
+                is_basic: true,
+            },
+        );
         let energy_id = energy.id;
         card_db.insert(energy_id, energy);
 
@@ -380,7 +409,7 @@ mod tests {
 
         let shuffled = deck.shuffle();
         assert_eq!(shuffled.len(), 10);
-        
+
         // All original cards should be present
         for &card_id in &card_ids {
             assert!(shuffled.contains(&card_id));
@@ -393,24 +422,30 @@ mod tests {
         let mut card_db = HashMap::new();
 
         // Add a Pokemon
-        let pokemon = create_test_card("Pikachu", CardType::Pokemon {
-            species: "Pikachu".to_string(),
-            hp: 60,
-            retreat_cost: 1,
-            weakness: None,
-            resistance: None,
-            stage: EvolutionStage::Basic,
-            evolves_from: None,
-        });
+        let pokemon = create_test_card(
+            "Pikachu",
+            CardType::Pokemon {
+                species: "Pikachu".to_string(),
+                hp: 60,
+                retreat_cost: 1,
+                weakness: None,
+                resistance: None,
+                stage: EvolutionStage::Basic,
+                evolves_from: None,
+            },
+        );
         let pokemon_id = pokemon.id;
         card_db.insert(pokemon_id, pokemon);
         deck.add_card(pokemon_id, 4);
 
         // Add energy
-        let energy = create_test_card("Lightning Energy", CardType::Energy {
-            energy_type: EnergyType::Lightning,
-            is_basic: true,
-        });
+        let energy = create_test_card(
+            "Lightning Energy",
+            CardType::Energy {
+                energy_type: EnergyType::Lightning,
+                is_basic: true,
+            },
+        );
         let energy_id = energy.id;
         card_db.insert(energy_id, energy);
         deck.add_card(energy_id, 10);

@@ -1,22 +1,21 @@
 //! Rule engine system for PTCG
-//! 
+//!
 //! This module provides a flexible rule system that can validate game actions,
 //! enforce game rules, and be extended with custom rules.
 
-use crate::core::{Game, Player, Card, CardId};
 use crate::core::player::PlayerId;
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
+use crate::core::{CardId, Game};
 use dyn_clone::DynClone;
+use serde::{Deserialize, Serialize};
 
 /// Trait for defining game rules
 pub trait Rule: DynClone + Send + Sync {
     /// Name of the rule
     fn name(&self) -> &str;
-    
+
     /// Check if a game action is valid according to this rule
     fn validate_action(&self, game: &Game, action: &GameAction) -> RuleResult;
-    
+
     /// Apply any effects when this rule is triggered
     fn apply_effect(&self, game: &mut Game, action: &GameAction) -> RuleResult;
 }
@@ -54,13 +53,29 @@ pub enum GameAction {
     /// Draw a card
     DrawCard { player_id: PlayerId },
     /// Play a card from hand
-    PlayCard { player_id: PlayerId, card_id: CardId, target: Option<CardId> },
+    PlayCard {
+        player_id: PlayerId,
+        card_id: CardId,
+        target: Option<CardId>,
+    },
     /// Attach energy to a Pokemon
-    AttachEnergy { player_id: PlayerId, energy_id: CardId, pokemon_id: CardId },
+    AttachEnergy {
+        player_id: PlayerId,
+        energy_id: CardId,
+        pokemon_id: CardId,
+    },
     /// Use a Pokemon's attack
-    UseAttack { player_id: PlayerId, pokemon_id: CardId, attack_index: usize, target: Option<CardId> },
+    UseAttack {
+        player_id: PlayerId,
+        pokemon_id: CardId,
+        attack_index: usize,
+        target: Option<CardId>,
+    },
     /// Retreat a Pokemon
-    Retreat { player_id: PlayerId, pokemon_id: CardId },
+    Retreat {
+        player_id: PlayerId,
+        pokemon_id: CardId,
+    },
     /// End turn
     EndTurn { player_id: PlayerId },
     /// Pass turn without action
@@ -134,7 +149,7 @@ impl RuleEngine {
                 Err(violation) => {
                     if violation.severity as u8 >= self.config.min_severity as u8 {
                         violations.push(violation);
-                        
+
                         if self.config.stop_on_first_violation {
                             break;
                         }
@@ -147,13 +162,22 @@ impl RuleEngine {
     }
 
     /// Apply an action if it passes all rule validations
-    pub fn apply_action(&self, game: &mut Game, action: &GameAction) -> Result<(), Vec<RuleViolation>> {
+    pub fn apply_action(
+        &self,
+        game: &mut Game,
+        action: &GameAction,
+    ) -> Result<(), Vec<RuleViolation>> {
         // First validate the action
         let violations = self.validate_action(game, action);
-        
+
         // Check if there are any blocking violations
-        let has_errors = violations.iter().any(|v| matches!(v.severity, ViolationSeverity::Error | ViolationSeverity::Fatal));
-        
+        let has_errors = violations.iter().any(|v| {
+            matches!(
+                v.severity,
+                ViolationSeverity::Error | ViolationSeverity::Fatal
+            )
+        });
+
         if has_errors {
             return Err(violations);
         }
@@ -172,7 +196,10 @@ impl RuleEngine {
 
     /// Get all rule names
     pub fn get_rule_names(&self) -> Vec<String> {
-        self.rules.iter().map(|rule| rule.name().to_string()).collect()
+        self.rules
+            .iter()
+            .map(|rule| rule.name().to_string())
+            .collect()
     }
 
     /// Check if a specific rule is active
@@ -194,11 +221,11 @@ impl StandardRules {
     /// Create a rule engine with standard PTCG rules
     pub fn create_engine() -> RuleEngine {
         let mut engine = RuleEngine::new();
-        
+
         engine.add_rule(TurnOrderRule);
         engine.add_rule(HandLimitRule);
         engine.add_rule(EnergyAttachmentRule);
-        
+
         engine
     }
 }
@@ -214,13 +241,13 @@ impl Rule for TurnOrderRule {
 
     fn validate_action(&self, game: &Game, action: &GameAction) -> RuleResult {
         let action_player_id = match action {
-            GameAction::DrawCard { player_id, .. } |
-            GameAction::PlayCard { player_id, .. } |
-            GameAction::AttachEnergy { player_id, .. } |
-            GameAction::UseAttack { player_id, .. } |
-            GameAction::Retreat { player_id, .. } |
-            GameAction::EndTurn { player_id, .. } |
-            GameAction::Pass { player_id, .. } => *player_id,
+            GameAction::DrawCard { player_id, .. }
+            | GameAction::PlayCard { player_id, .. }
+            | GameAction::AttachEnergy { player_id, .. }
+            | GameAction::UseAttack { player_id, .. }
+            | GameAction::Retreat { player_id, .. }
+            | GameAction::EndTurn { player_id, .. }
+            | GameAction::Pass { player_id, .. } => *player_id,
         };
 
         if !game.is_player_turn(action_player_id) {
@@ -249,18 +276,16 @@ impl Rule for HandLimitRule {
     }
 
     fn validate_action(&self, game: &Game, action: &GameAction) -> RuleResult {
-        if let GameAction::DrawCard { player_id } = action {
-            if let Some(player) = game.get_player(*player_id) {
-                if let Some(max_hand_size) = game.rules.max_hand_size {
-                    if player.hand.len() >= max_hand_size as usize {
-                        return Err(RuleViolation {
-                            rule_name: self.name().to_string(),
-                            message: format!("Hand size limit exceeded ({})", max_hand_size),
-                            severity: ViolationSeverity::Error,
-                        });
-                    }
-                }
-            }
+        if let GameAction::DrawCard { player_id } = action
+            && let Some(player) = game.get_player(*player_id)
+            && let Some(max_hand_size) = game.rules.max_hand_size
+            && player.hand.len() >= max_hand_size as usize
+        {
+            return Err(RuleViolation {
+                rule_name: self.name().to_string(),
+                message: format!("Hand size limit exceeded ({})", max_hand_size),
+                severity: ViolationSeverity::Error,
+            });
         }
         Ok(())
     }
@@ -280,36 +305,40 @@ impl Rule for EnergyAttachmentRule {
     }
 
     fn validate_action(&self, game: &Game, action: &GameAction) -> RuleResult {
-        if let GameAction::AttachEnergy { player_id, energy_id, pokemon_id } = action {
-            if let Some(player) = game.get_player(*player_id) {
-                // Check if energy card is in hand
-                if !player.hand.contains(energy_id) {
-                    return Err(RuleViolation {
-                        rule_name: self.name().to_string(),
-                        message: "Energy card not in hand".to_string(),
-                        severity: ViolationSeverity::Error,
-                    });
-                }
+        if let GameAction::AttachEnergy {
+            player_id,
+            energy_id,
+            pokemon_id,
+        } = action
+            && let Some(player) = game.get_player(*player_id)
+        {
+            // Check if energy card is in hand
+            if !player.hand.contains(energy_id) {
+                return Err(RuleViolation {
+                    rule_name: self.name().to_string(),
+                    message: "Energy card not in hand".to_string(),
+                    severity: ViolationSeverity::Error,
+                });
+            }
 
-                // Check if target Pokemon exists
-                if Some(*pokemon_id) != player.active_pokemon && !player.bench.contains(pokemon_id) {
-                    return Err(RuleViolation {
-                        rule_name: self.name().to_string(),
-                        message: "Target Pokemon not found".to_string(),
-                        severity: ViolationSeverity::Error,
-                    });
-                }
+            // Check if target Pokemon exists
+            if Some(*pokemon_id) != player.active_pokemon && !player.bench.contains(pokemon_id) {
+                return Err(RuleViolation {
+                    rule_name: self.name().to_string(),
+                    message: "Target Pokemon not found".to_string(),
+                    severity: ViolationSeverity::Error,
+                });
+            }
 
-                // Check if energy card is actually an energy
-                if let Some(card) = game.get_card(*energy_id) {
-                    if !card.is_energy() {
-                        return Err(RuleViolation {
-                            rule_name: self.name().to_string(),
-                            message: "Card is not an energy".to_string(),
-                            severity: ViolationSeverity::Error,
-                        });
-                    }
-                }
+            // Check if energy card is actually an energy
+            if let Some(card) = game.get_card(*energy_id)
+                && !card.is_energy()
+            {
+                return Err(RuleViolation {
+                    rule_name: self.name().to_string(),
+                    message: "Card is not an energy".to_string(),
+                    severity: ViolationSeverity::Error,
+                });
             }
         }
         Ok(())
@@ -323,7 +352,6 @@ impl Rule for EnergyAttachmentRule {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{Game, Player};
 
     #[test]
     fn test_rule_engine_creation() {
@@ -335,7 +363,7 @@ mod tests {
     fn test_add_rule() {
         let mut engine = RuleEngine::new();
         engine.add_rule(TurnOrderRule);
-        
+
         assert_eq!(engine.get_rule_names().len(), 1);
         assert!(engine.has_rule("TurnOrder"));
     }

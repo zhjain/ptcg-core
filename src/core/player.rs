@@ -129,7 +129,7 @@ impl Player {
             // Remove from current location
             self.hand.retain(|&id| id != card_id);
             self.bench.retain(|&id| id != card_id);
-            
+
             // Set as active
             if let Some(old_active) = self.active_pokemon {
                 self.bench.push(old_active);
@@ -158,17 +158,17 @@ impl Player {
 
     /// Attach energy to a Pokemon
     pub fn attach_energy(&mut self, energy_id: CardId, pokemon_id: CardId) -> bool {
-        if self.hand.contains(&energy_id) && 
-           (Some(pokemon_id) == self.active_pokemon || self.bench.contains(&pokemon_id)) {
-            
+        if self.hand.contains(&energy_id)
+            && (Some(pokemon_id) == self.active_pokemon || self.bench.contains(&pokemon_id))
+        {
             // Remove energy from hand
             if let Some(pos) = self.hand.iter().position(|&id| id == energy_id) {
                 self.hand.remove(pos);
-                
+
                 // Attach to Pokemon
                 self.attached_energy
                     .entry(pokemon_id)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(energy_id);
                 true
             } else {
@@ -182,7 +182,8 @@ impl Player {
     /// Add damage to a Pokemon
     pub fn add_damage(&mut self, pokemon_id: CardId, damage: u32) {
         let current_damage = self.damage_counters.get(&pokemon_id).unwrap_or(&0);
-        self.damage_counters.insert(pokemon_id, current_damage + damage);
+        self.damage_counters
+            .insert(pokemon_id, current_damage + damage);
     }
 
     /// Heal damage from a Pokemon
@@ -209,7 +210,7 @@ impl Player {
     pub fn add_special_condition(&mut self, pokemon_id: CardId, condition: SpecialCondition) {
         self.special_conditions
             .entry(pokemon_id)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(condition);
     }
 
@@ -298,7 +299,6 @@ impl Player {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::card::{Card, CardType, CardRarity, EnergyType, EvolutionStage};
 
     #[test]
     fn test_create_player() {
@@ -337,7 +337,7 @@ mod tests {
         let mut player = Player::new("Test Player".to_string());
         let pokemon_id = Uuid::new_v4();
         let energy_id = Uuid::new_v4();
-        
+
         player.hand.push(energy_id);
         player.active_pokemon = Some(pokemon_id);
 
@@ -350,13 +350,13 @@ mod tests {
     fn test_damage_system() {
         let mut player = Player::new("Test Player".to_string());
         let pokemon_id = Uuid::new_v4();
-        
+
         player.add_damage(pokemon_id, 30);
         assert_eq!(player.damage_counters.get(&pokemon_id), Some(&30));
-        
+
         player.heal_damage(pokemon_id, 10);
         assert_eq!(player.damage_counters.get(&pokemon_id), Some(&20));
-        
+
         player.heal_damage(pokemon_id, 30);
         assert!(!player.damage_counters.contains_key(&pokemon_id));
     }
@@ -365,10 +365,10 @@ mod tests {
     fn test_special_conditions() {
         let mut player = Player::new("Test Player".to_string());
         let pokemon_id = Uuid::new_v4();
-        
+
         player.add_special_condition(pokemon_id, SpecialCondition::Poisoned);
         assert!(player.has_special_condition(pokemon_id, &SpecialCondition::Poisoned));
-        
+
         player.remove_special_condition(pokemon_id, &SpecialCondition::Poisoned);
         assert!(!player.has_special_condition(pokemon_id, &SpecialCondition::Poisoned));
     }

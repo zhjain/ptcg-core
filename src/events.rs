@@ -1,5 +1,5 @@
 //! Event system for game state changes and notifications
-//! 
+//!
 //! This module provides a flexible event system that allows tracking
 //! game state changes, implementing reactive behavior, and logging game history.
 
@@ -15,13 +15,13 @@ pub type EventId = Uuid;
 pub trait Event: Send + Sync {
     /// Get the event type name
     fn event_type(&self) -> &str;
-    
+
     /// Get the timestamp when this event occurred
     fn timestamp(&self) -> u64;
-    
+
     /// Get the player associated with this event (if any)
     fn player_id(&self) -> Option<PlayerId>;
-    
+
     /// Convert this event to a serializable format
     fn to_serializable(&self) -> SerializableEvent;
 }
@@ -40,7 +40,7 @@ pub struct SerializableEvent {
 pub trait EventHandler: Send + Sync {
     /// Handle an event
     fn handle_event(&mut self, event: &dyn Event);
-    
+
     /// Check if this handler is interested in a specific event type
     fn handles_event_type(&self, event_type: &str) -> bool;
 }
@@ -84,7 +84,7 @@ impl EventBus {
         // Store in history
         let serializable = event.to_serializable();
         self.history.push(serializable);
-        
+
         // Trim history if necessary
         if self.history.len() > self.max_history {
             self.history.drain(0..self.history.len() - self.max_history);
@@ -157,10 +157,7 @@ pub enum GameEvent {
         turn_number: u32,
     },
     /// Turn ended
-    TurnEnded {
-        timestamp: u64,
-        player_id: PlayerId,
-    },
+    TurnEnded { timestamp: u64, player_id: PlayerId },
     /// Card drawn
     CardDrawn {
         timestamp: u64,
@@ -213,7 +210,7 @@ impl Event for GameEvent {
 
     fn to_serializable(&self) -> SerializableEvent {
         let mut data = HashMap::new();
-        
+
         match self {
             GameEvent::GameStarted { players, .. } => {
                 data.insert("players".to_string(), format!("{:?}", players));
@@ -228,7 +225,12 @@ impl Event for GameEvent {
             GameEvent::CardDrawn { card_id, .. } => {
                 data.insert("card_id".to_string(), format!("{:?}", card_id));
             }
-            GameEvent::CardPlayed { card_id, from_location, to_location, .. } => {
+            GameEvent::CardPlayed {
+                card_id,
+                from_location,
+                to_location,
+                ..
+            } => {
                 data.insert("card_id".to_string(), card_id.to_string());
                 data.insert("from_location".to_string(), from_location.clone());
                 data.insert("to_location".to_string(), to_location.clone());
@@ -260,8 +262,9 @@ impl ConsoleEventHandler {
 impl EventHandler for ConsoleEventHandler {
     fn handle_event(&mut self, event: &dyn Event) {
         if self.verbose {
-            println!("[{}] {}: {:?}", 
-                event.timestamp(), 
+            println!(
+                "[{}] {}: {:?}",
+                event.timestamp(),
                 event.event_type(),
                 event.to_serializable()
             );
@@ -299,7 +302,7 @@ mod tests {
     fn test_register_handler() {
         let mut bus = EventBus::new();
         let handler = ConsoleEventHandler::new(false);
-        
+
         bus.register_handler(handler);
         assert_eq!(bus.handler_count(), 1);
     }

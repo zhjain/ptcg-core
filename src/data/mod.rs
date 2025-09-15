@@ -1,5 +1,5 @@
 //! Data import and export functionality
-//! 
+//!
 //! This module provides support for importing card data from various formats
 //! including JSON, CSV, and database files.
 
@@ -19,10 +19,10 @@ use std::collections::HashMap;
 pub trait DataImporter {
     /// Import cards from the data source
     fn import_cards(&self) -> Result<Vec<Card>, ImportError>;
-    
+
     /// Import a specific card by ID or name
     fn import_card(&self, identifier: &str) -> Result<Option<Card>, ImportError>;
-    
+
     /// Get the source information
     fn source_info(&self) -> SourceInfo;
 }
@@ -31,7 +31,7 @@ pub trait DataImporter {
 pub trait DataExporter {
     /// Export cards to the data format
     fn export_cards(&self, cards: &[Card]) -> Result<(), ExportError>;
-    
+
     /// Export a single card
     fn export_card(&self, card: &Card) -> Result<(), ExportError>;
 }
@@ -50,23 +50,23 @@ pub struct SourceInfo {
 pub enum ImportError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("Parse error: {0}")]
     Parse(String),
-    
+
     #[error("Invalid format: {0}")]
     InvalidFormat(String),
-    
+
     #[error("Missing required field: {0}")]
     MissingField(String),
-    
+
     #[error("Source not found: {0}")]
     SourceNotFound(String),
-    
+
     #[cfg(feature = "json")]
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
-    
+
     #[cfg(feature = "database")]
     #[error("Database error: {0}")]
     Database(#[from] rusqlite::Error),
@@ -77,17 +77,17 @@ pub enum ImportError {
 pub enum ExportError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("Serialization error: {0}")]
     Serialization(String),
-    
+
     #[error("Invalid data: {0}")]
     InvalidData(String),
-    
+
     #[cfg(feature = "json")]
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
-    
+
     #[cfg(feature = "database")]
     #[error("Database error: {0}")]
     Database(#[from] rusqlite::Error),
@@ -114,13 +114,13 @@ impl BatchImporter {
     /// Import cards from all sources
     pub fn import_all(&self) -> Result<HashMap<String, Vec<Card>>, ImportError> {
         let mut results = HashMap::new();
-        
+
         for importer in &self.importers {
             let source_info = importer.source_info();
             let cards = importer.import_cards()?;
             results.insert(source_info.name, cards);
         }
-        
+
         Ok(results)
     }
 

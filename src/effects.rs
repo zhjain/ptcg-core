@@ -1,14 +1,14 @@
 //! Card effect system for implementing custom card behaviors
-//! 
+//!
 //! This module provides a flexible system for defining and applying
 //! card effects, triggers, and conditions.
 
-use crate::core::{Game, Player, Card, CardId};
 use crate::core::player::PlayerId;
+use crate::core::{CardId, Game};
+use dyn_clone::DynClone;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use dyn_clone::DynClone;
 
 /// Unique identifier for an effect
 pub type EffectId = Uuid;
@@ -17,22 +17,22 @@ pub type EffectId = Uuid;
 pub trait Effect: DynClone + Send + Sync {
     /// Get the effect's unique identifier
     fn id(&self) -> EffectId;
-    
+
     /// Get the effect's name
     fn name(&self) -> &str;
-    
+
     /// Get the effect's description
     fn description(&self) -> &str;
-    
+
     /// Check if this effect can be applied in the current game state
     fn can_apply(&self, game: &Game, context: &EffectContext) -> bool;
-    
+
     /// Apply the effect to the game state
     fn apply(&self, game: &mut Game, context: &EffectContext) -> EffectResult;
-    
+
     /// Get the effect's trigger conditions
     fn triggers(&self) -> Vec<EffectTrigger>;
-    
+
     /// Get the effect's target requirements
     fn target_requirements(&self) -> Vec<TargetRequirement>;
 }
@@ -69,13 +69,20 @@ pub enum EffectOutcome {
     /// Energy was attached
     EnergyAttached { energy: CardId, target: CardId },
     /// A card was moved
-    CardMoved { card: CardId, from: String, to: String },
+    CardMoved {
+        card: CardId,
+        from: String,
+        to: String,
+    },
     /// A special condition was applied
     SpecialConditionApplied { target: CardId, condition: String },
     /// A special condition was removed
     SpecialConditionRemoved { target: CardId, condition: String },
     /// Custom effect outcome
-    Custom { description: String, data: HashMap<String, String> },
+    Custom {
+        description: String,
+        data: HashMap<String, String>,
+    },
 }
 
 /// Errors that can occur when applying effects
@@ -84,7 +91,11 @@ pub enum EffectError {
     /// Invalid target for the effect
     InvalidTarget { reason: String },
     /// Insufficient resources (energy, cards, etc.)
-    InsufficientResources { resource: String, required: u32, available: u32 },
+    InsufficientResources {
+        resource: String,
+        required: u32,
+        available: u32,
+    },
     /// Effect cannot be applied due to game state
     InvalidGameState { reason: String },
     /// Effect requirements not met
@@ -183,6 +194,7 @@ pub struct EffectManager {
     /// Effects currently active in the game
     active_effects: HashMap<CardId, Vec<EffectId>>,
     /// Triggered effects waiting to resolve
+    #[allow(dead_code)]
     pending_effects: Vec<(EffectId, EffectContext)>,
 }
 
@@ -207,7 +219,7 @@ impl EffectManager {
     pub fn attach_effect(&mut self, card_id: CardId, effect_id: EffectId) {
         self.active_effects
             .entry(card_id)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(effect_id);
     }
 
@@ -249,6 +261,7 @@ pub struct DamageEffect {
     id: EffectId,
     name: String,
     damage: u32,
+    #[allow(dead_code)]
     target_type: EffectTarget,
 }
 
@@ -288,33 +301,37 @@ impl Effect for DamageEffect {
                     if let Some(active) = player.active_pokemon {
                         active
                     } else {
-                        return Err(EffectError::InvalidTarget { 
-                            reason: "No active Pokemon".to_string() 
+                        return Err(EffectError::InvalidTarget {
+                            reason: "No active Pokemon".to_string(),
                         });
                     }
                 } else {
-                    return Err(EffectError::InvalidTarget { 
-                        reason: "Player not found".to_string() 
+                    return Err(EffectError::InvalidTarget {
+                        reason: "Player not found".to_string(),
                     });
                 }
             }
-            _ => return Err(EffectError::InvalidTarget { 
-                reason: "Invalid target type".to_string() 
-            }),
+            _ => {
+                return Err(EffectError::InvalidTarget {
+                    reason: "Invalid target type".to_string(),
+                });
+            }
         };
 
         // Apply damage to the target
-        if let Some(player) = game.players.values_mut().find(|p| 
-            Some(target_card) == p.active_pokemon || p.bench.contains(&target_card)
-        ) {
+        if let Some(player) = game
+            .players
+            .values_mut()
+            .find(|p| Some(target_card) == p.active_pokemon || p.bench.contains(&target_card))
+        {
             player.add_damage(target_card, self.damage);
-            Ok(vec![EffectOutcome::DamageDealt { 
-                target: target_card, 
-                amount: self.damage 
+            Ok(vec![EffectOutcome::DamageDealt {
+                target: target_card,
+                amount: self.damage,
             }])
         } else {
-            Err(EffectError::InvalidTarget { 
-                reason: "Target Pokemon not found".to_string() 
+            Err(EffectError::InvalidTarget {
+                reason: "Target Pokemon not found".to_string(),
             })
         }
     }
@@ -344,7 +361,7 @@ mod tests {
         let mut manager = EffectManager::new();
         let effect = DamageEffect::new("Test Damage".to_string(), 30, EffectTarget::None);
         let id = manager.register_effect(effect);
-        
+
         assert!(manager.effects.contains_key(&id));
     }
 
