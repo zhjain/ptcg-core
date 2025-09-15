@@ -1,7 +1,7 @@
-//! Rule engine system for PTCG
+//! PTCG 规则引擎系统
 //!
-//! This module provides a flexible rule system that can validate game actions,
-//! enforce game rules, and be extended with custom rules.
+//! 该模块提供了一个灵活的规则系统，可以验证游戏动作、
+//! 强制执行游戏规则，并可以通过自定义规则进行扩展。
 
 use crate::core::player::PlayerId;
 use crate::core::{CardId, Game};

@@ -1,4 +1,4 @@
-//! Deck management and construction functionality
+//! 牌组管理和构建功能
 
 use crate::core::card::{Card, CardId};
 use serde::{Deserialize, Serialize};

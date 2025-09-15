@@ -1,7 +1,7 @@
-//! Event system for game state changes and notifications
+//! 游戏状态变化和通知的事件系统
 //!
-//! This module provides a flexible event system that allows tracking
-//! game state changes, implementing reactive behavior, and logging game history.
+//! 该模块提供了一个灵活的事件系统，用于追踪
+//! 游戏状态变化、实现响应式行为和记录游戏历史。
 
 use crate::core::{CardId, player::PlayerId};
 use serde::{Deserialize, Serialize};

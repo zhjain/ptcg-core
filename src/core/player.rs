@@ -1,4 +1,4 @@
-//! Player-related data structures and functionality
+//! 玩家相关的数据结构和功能
 
 use crate::core::card::{Card, CardId};
 use serde::{Deserialize, Serialize};

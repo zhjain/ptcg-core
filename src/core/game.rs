@@ -1,4 +1,4 @@
-//! Main game logic and state management
+//! 主要游戏逻辑和状态管理
 
 use crate::core::{
     card::{Card, CardId},

@@ -1,4 +1,4 @@
-//! Card-related data structures and functionality
+//! 卡牌相关的数据结构和功能
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

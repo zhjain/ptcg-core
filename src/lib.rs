@@ -1,44 +1,50 @@
-//! # PTCG Core Engine
+//! # PTCG 核心引擎
 //!
-//! A flexible and extensible core engine for Pokemon Trading Card Game simulators.
+//! 一个灵活且可扩展的宝可梦集换式卡牌游戏模拟器核心引擎。
 //!
-//! ## Quick Start
+//! ## 快速开始
 //!
 //! ```rust
 //! use ptcg_core::{Game, Player, Deck};
 //!
-//! // Create a new game
+//! // 创建新游戏
 //! let mut game = Game::new();
 //!
-//! // Add players
-//! let player1 = Player::new("Player 1".to_string());
-//! let player2 = Player::new("Player 2".to_string());
+//! // 添加玩家
+//! let player1 = Player::new("玩家1".to_string());
+//! let player2 = Player::new("玩家2".to_string());
 //!
 //! game.add_player(player1).unwrap();
 //! game.add_player(player2).unwrap();
 //!
-//! // Start the game (after setting decks)
+//! // 开始游戏（设置牌组后）
 //! // game.start().unwrap();
 //! ```
 //!
-//! ## Features
+//! ## 特性
 //!
-//! - **Modular Design**: Use only what you need
-//! - **Data Import**: Support for various data formats (.pdb, JSON, CSV)
-//! - **Rule Extensions**: Easy to add new card effects and rules
-//! - **Network Ready**: Built-in support for multiplayer games
-//! - **Performance**: Zero-cost abstractions and compile-time optimizations
+//! - **模块化设计**: 按需使用所需功能
+//! - **数据导入**: 支持多种数据格式 (.pdb, JSON, CSV)
+//! - **规则扩展**: 轻松添加新的卡牌效果和规则
+//! - **网络就绪**: 内置多人游戏支持
+//! - **性能优化**: 零成本抽象和编译时优化
 
+/// 核心游戏逻辑模块
 pub mod core;
+/// 数据导入和管理模块
 pub mod data;
+/// 卡牌效果系统模块
 pub mod effects;
+/// 事件系统模块
 pub mod events;
+/// 游戏规则引擎模块
 pub mod rules;
 
+/// 网络功能模块（需要async特性）
 #[cfg(feature = "async")]
 pub mod network;
 
-// Re-export commonly used types
+// 重新导出常用类型
 pub use core::{
     card::{Ability, Attack, Card, CardRarity, CardType, EnergyType},
     deck::{Deck, DeckValidationError},
@@ -61,40 +67,40 @@ pub use data::csv::CsvImporter;
 #[cfg(feature = "database")]
 pub use data::database::DatabaseImporter;
 
-/// Result type used throughout the library
+/// 库中使用的结果类型
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// Error types for the library
+/// 库的错误类型
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("Game error: {0}")]
+    #[error("游戏错误: {0}")]
     Game(String),
 
-    #[error("Rule violation: {0}")]
+    #[error("规则违反: {0}")]
     Rule(String),
 
-    #[error("Data error: {0}")]
+    #[error("数据错误: {0}")]
     Data(String),
 
-    #[error("Network error: {0}")]
+    #[error("网络错误: {0}")]
     Network(String),
 
-    #[error("IO error: {0}")]
+    #[error("IO错误: {0}")]
     Io(#[from] std::io::Error),
 
     #[cfg(feature = "json")]
-    #[error("JSON error: {0}")]
+    #[error("JSON错误: {0}")]
     Json(#[from] serde_json::Error),
 
     #[cfg(feature = "database")]
-    #[error("Database error: {0}")]
+    #[error("数据库错误: {0}")]
     Database(#[from] rusqlite::Error),
 }
 
-/// Library version information
+/// 库版本信息
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// Get library information
+/// 获取库信息
 pub fn info() -> LibraryInfo {
     LibraryInfo {
         version: VERSION,
@@ -102,7 +108,7 @@ pub fn info() -> LibraryInfo {
     }
 }
 
-/// Library information
+/// 库信息
 #[derive(Debug)]
 pub struct LibraryInfo {
     pub version: &'static str,

@@ -1,7 +1,7 @@
-//! Card effect system for implementing custom card behaviors
+//! 卡牌效果系统，用于实现自定义卡牌行为
 //!
-//! This module provides a flexible system for defining and applying
-//! card effects, triggers, and conditions.
+//! 该模块提供了一个灵活的系统来定义和应用
+//! 卡牌效果、触发器和条件。
 
 use crate::core::player::PlayerId;
 use crate::core::{CardId, Game};

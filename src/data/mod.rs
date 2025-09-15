@@ -1,7 +1,7 @@
-//! Data import and export functionality
+//! 数据导入和导出功能
 //!
-//! This module provides support for importing card data from various formats
-//! including JSON, CSV, and database files.
+//! 该模块提供了从各种格式导入卡牌数据的支持，
+//! 包括 JSON、CSV 和数据库文件。
 
 #[cfg(feature = "json")]
 pub mod json;
