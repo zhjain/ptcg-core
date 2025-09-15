@@ -40,6 +40,19 @@ pub enum DeckValidationError {
     InvalidCard { card_name: String, format: String },
     /// Missing required cards (e.g., no basic Pokemon)
     MissingRequired { requirement: String },
+    /// Banned card in format
+    BannedCard { card_name: String, format: String },
+    /// Too many special cards (Prism Star, ACE SPEC, etc.)
+    TooManySpecialCards { 
+        card_type: String, 
+        count: u32, 
+        limit: u32 
+    },
+    /// Insufficient energy count
+    InsufficientEnergy { 
+        current: u32, 
+        minimum: u32 
+    },
 }
 
 impl Deck {
@@ -121,7 +134,161 @@ impl Deck {
         deck
     }
 
-    /// Validate the deck according to standard PTCG rules
+    /// Validate the deck according to format-specific rules
+    pub fn validate_advanced(
+        &self,
+        card_database: &HashMap<CardId, Card>,
+    ) -> Result<(), Vec<DeckValidationError>> {
+        let mut errors = Vec::new();
+        let total = self.total_cards();
+
+        // Get format-specific rules
+        let (min_size, max_size, copy_limit) = match self.format.as_str() {
+            "Standard" => (60, Some(60), 4),
+            "Expanded" => (60, Some(60), 4),
+            "Limited" => (40, None, u32::MAX),
+            "Unlimited" => (60, Some(60), 4),
+            _ => (60, Some(60), 4), // Default
+        };
+
+        // Check deck size
+        if total < min_size {
+            errors.push(DeckValidationError::TooFewCards {
+                current: total as usize,
+                minimum: min_size as usize,
+            });
+        }
+        if let Some(max) = max_size {
+            if total > max {
+                errors.push(DeckValidationError::TooManyCards {
+                    current: total as usize,
+                    maximum: max as usize,
+                });
+            }
+        }
+
+        // Check for banned cards
+        let banned_cards = self.get_banned_cards();
+        
+        // Count special cards and track requirements
+        let mut has_basic_pokemon = false;
+        let mut energy_count = 0;
+        let mut prism_star_count = 0;
+        let mut ace_spec_count = 0;
+
+        for (&card_id, &quantity) in &self.cards {
+            if let Some(card) = card_database.get(&card_id) {
+                // Check if card is banned
+                if banned_cards.contains(&card.name) {
+                    errors.push(DeckValidationError::BannedCard {
+                        card_name: card.name.clone(),
+                        format: self.format.clone(),
+                    });
+                }
+
+                // Check copy limits
+                let max_copies = if card.is_energy() {
+                    if matches!(
+                        card.card_type,
+                        crate::core::card::CardType::Energy { is_basic: true, .. }
+                    ) {
+                        u32::MAX // Basic energy has no limit
+                    } else {
+                        copy_limit
+                    }
+                } else {
+                    copy_limit
+                };
+
+                if quantity > max_copies {
+                    errors.push(DeckValidationError::TooManyCopies {
+                        card_name: card.name.clone(),
+                        copies: quantity,
+                        limit: max_copies,
+                    });
+                }
+
+                // Count special cards
+                if card.rules.iter().any(|rule| rule.contains("Prism Star")) {
+                    prism_star_count += quantity;
+                }
+                if card.rules.iter().any(|rule| rule.contains("ACE SPEC")) {
+                    ace_spec_count += quantity;
+                }
+
+                // Check for basic Pokemon
+                if let crate::core::card::CardType::Pokemon {
+                    stage: crate::core::card::EvolutionStage::Basic,
+                    ..
+                } = card.card_type
+                {
+                    has_basic_pokemon = true;
+                }
+
+                // Count energy cards
+                if card.is_energy() {
+                    energy_count += quantity;
+                }
+            }
+        }
+
+        // Validate special card limits
+        if prism_star_count > 1 {
+            errors.push(DeckValidationError::TooManySpecialCards {
+                card_type: "Prism Star".to_string(),
+                count: prism_star_count,
+                limit: 1,
+            });
+        }
+        if ace_spec_count > 1 {
+            errors.push(DeckValidationError::TooManySpecialCards {
+                card_type: "ACE SPEC".to_string(),
+                count: ace_spec_count,
+                limit: 1,
+            });
+        }
+
+        // Check basic Pokemon requirement
+        if !has_basic_pokemon {
+            errors.push(DeckValidationError::MissingRequired {
+                requirement: "At least one Basic Pokemon".to_string(),
+            });
+        }
+
+        // Check energy requirements for competitive formats
+        if matches!(self.format.as_str(), "Standard" | "Expanded") {
+            let min_energy = 8; // Recommended minimum
+            if energy_count < min_energy {
+                errors.push(DeckValidationError::InsufficientEnergy {
+                    current: energy_count,
+                    minimum: min_energy,
+                });
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
+    /// Get banned cards for the current format
+    fn get_banned_cards(&self) -> Vec<String> {
+        match self.format.as_str() {
+            "Standard" => vec![
+                "Lysandre's Trump Card".to_string(),
+                "Forest of Giant Plants".to_string(),
+                "Hex Maniac".to_string(),
+            ],
+            "Expanded" => vec![
+                "Lysandre's Trump Card".to_string(),
+                "Forest of Giant Plants".to_string(),
+            ],
+            "Unlimited" => vec![], // No bans in unlimited
+            _ => vec![], // Custom format, no default bans
+        }
+    }
     pub fn validate(
         &self,
         card_database: &HashMap<CardId, Card>,
@@ -455,5 +622,124 @@ mod tests {
         assert_eq!(stats.energy_count, 10);
         assert_eq!(stats.total_cards, 14);
         assert_eq!(stats.unique_cards, 2);
+    }
+
+    #[test]
+    fn test_advanced_validation() {
+        let mut deck = Deck::new("Test Deck".to_string(), "Standard".to_string());
+        let mut card_db = HashMap::new();
+
+        // Create a basic Pokemon
+        let basic_pokemon = create_test_card(
+            "Pikachu",
+            CardType::Pokemon {
+                species: "Pikachu".to_string(),
+                hp: 60,
+                retreat_cost: 1,
+                weakness: None,
+                resistance: None,
+                stage: EvolutionStage::Basic,
+                evolves_from: None,
+            },
+        );
+        let basic_id = basic_pokemon.id;
+        card_db.insert(basic_id, basic_pokemon);
+
+        // Create basic energy
+        let energy = create_test_card(
+            "Lightning Energy",
+            CardType::Energy {
+                energy_type: EnergyType::Lightning,
+                is_basic: true,
+            },
+        );
+        let energy_id = energy.id;
+        card_db.insert(energy_id, energy);
+
+        // Add cards to make a valid 60-card deck with sufficient energy
+        deck.add_card(basic_id, 4);
+        deck.add_card(energy_id, 56); // More than minimum 8 energy
+
+        let result = deck.validate_advanced(&card_db);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_insufficient_energy_validation() {
+        let mut deck = Deck::new("Test Deck".to_string(), "Standard".to_string());
+        let mut card_db = HashMap::new();
+
+        // Create a basic Pokemon
+        let basic_pokemon = create_test_card(
+            "Pikachu",
+            CardType::Pokemon {
+                species: "Pikachu".to_string(),
+                hp: 60,
+                retreat_cost: 1,
+                weakness: None,
+                resistance: None,
+                stage: EvolutionStage::Basic,
+                evolves_from: None,
+            },
+        );
+        let basic_id = basic_pokemon.id;
+        card_db.insert(basic_id, basic_pokemon);
+
+        // Create some trainer cards instead of energy
+        let trainer = create_test_card(
+            "Professor Oak",
+            CardType::Trainer {
+                trainer_type: crate::core::card::TrainerType::Supporter,
+            },
+        );
+        let trainer_id = trainer.id;
+        card_db.insert(trainer_id, trainer);
+
+        // Add cards with insufficient energy (only 2 energy in 60 cards)
+        deck.add_card(basic_id, 4);
+        deck.add_card(trainer_id, 54);
+        
+        let energy = create_test_card(
+            "Lightning Energy",
+            CardType::Energy {
+                energy_type: EnergyType::Lightning,
+                is_basic: true,
+            },
+        );
+        let energy_id = energy.id;
+        card_db.insert(energy_id, energy);
+        deck.add_card(energy_id, 2); // Only 2 energy, below minimum 8
+
+        let result = deck.validate_advanced(&card_db);
+        assert!(result.is_err());
+        
+        if let Err(errors) = result {
+            assert!(errors.iter().any(|e| matches!(e, DeckValidationError::InsufficientEnergy { .. })));
+        }
+    }
+
+    #[test]
+    fn test_banned_card_validation() {
+        let mut deck = Deck::new("Test Deck".to_string(), "Standard".to_string());
+        let mut card_db = HashMap::new();
+
+        // Create a "banned" card (simulated)
+        let mut banned_card = create_test_card(
+            "Lysandre's Trump Card",
+            CardType::Trainer {
+                trainer_type: crate::core::card::TrainerType::Item,
+            },
+        );
+        let banned_id = banned_card.id;
+        card_db.insert(banned_id, banned_card);
+
+        deck.add_card(banned_id, 1);
+
+        let result = deck.validate_advanced(&card_db);
+        assert!(result.is_err());
+        
+        if let Err(errors) = result {
+            assert!(errors.iter().any(|e| matches!(e, DeckValidationError::BannedCard { .. })));
+        }
     }
 }

@@ -102,9 +102,173 @@ pub struct Attack {
     pub damage: u32,
     /// Special effects of this attack
     pub effect: Option<String>,
+    /// Additional damage calculation mode
+    pub damage_mode: Option<DamageMode>,
+    /// Status effects that this attack can apply
+    pub status_effects: Vec<StatusEffect>,
+    /// Additional conditions required to use this attack
+    pub conditions: Vec<String>,
+    /// Target selection for this attack
+    pub target_type: AttackTargetType,
 }
 
-/// Ability information for Pokemon cards
+/// Different modes for calculating damage
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DamageMode {
+    /// Damage based on number of energy attached
+    PerEnergy { per_energy: u32, energy_type: Option<EnergyType> },
+    /// Damage based on coin flips
+    CoinFlip { per_heads: u32, flips: u32 },
+    /// Damage based on Pokemon in specific locations
+    PerPokemon { per_pokemon: u32, location: String },
+    /// Variable damage range
+    Variable { min: u32, max: u32 },
+}
+
+/// Status effects that can be applied by attacks
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StatusEffect {
+    /// Type of status condition
+    pub condition: StatusCondition,
+    /// Probability as percentage (0-100)
+    pub probability: u32,
+    /// Target of the effect
+    pub target: String,
+}
+
+/// Status conditions in PTCG
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum StatusCondition {
+    Poison,
+    Burn,
+    Paralysis,
+    Sleep,
+    Confusion,
+}
+
+/// Types of attack targets
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AttackTargetType {
+    /// Target the active Pokemon
+    Active,
+    /// Choose any of opponent's Pokemon
+    Choose,
+    /// All of opponent's Pokemon
+    All,
+    /// Specific bench positions
+    Bench,
+    /// Self (for healing, etc.)
+    Self_,
+}
+
+impl Attack {
+    /// Create a simple attack with fixed damage
+    pub fn simple(name: String, cost: Vec<EnergyType>, damage: u32) -> Self {
+        Self {
+            name,
+            cost,
+            damage,
+            effect: None,
+            damage_mode: None,
+            status_effects: Vec::new(),
+            conditions: Vec::new(),
+            target_type: AttackTargetType::Active,
+        }
+    }
+
+    /// Create an attack with status effect
+    pub fn with_status(
+        name: String,
+        cost: Vec<EnergyType>,
+        damage: u32,
+        status: StatusCondition,
+        probability: u32,
+    ) -> Self {
+        Self {
+            name,
+            cost,
+            damage,
+            effect: None,
+            damage_mode: None,
+            status_effects: vec![StatusEffect {
+                condition: status,
+                probability,
+                target: "defending".to_string(),
+            }],
+            conditions: Vec::new(),
+            target_type: AttackTargetType::Active,
+        }
+    }
+
+    /// Create an attack with coin flip damage
+    pub fn coin_flip_damage(
+        name: String,
+        cost: Vec<EnergyType>,
+        base_damage: u32,
+        damage_per_heads: u32,
+        flips: u32,
+    ) -> Self {
+        Self {
+            name,
+            cost,
+            damage: base_damage,
+            effect: None,
+            damage_mode: Some(DamageMode::CoinFlip {
+                per_heads: damage_per_heads,
+                flips,
+            }),
+            status_effects: Vec::new(),
+            conditions: Vec::new(),
+            target_type: AttackTargetType::Active,
+        }
+    }
+
+    /// Add a status effect to this attack
+    pub fn add_status_effect(&mut self, effect: StatusEffect) {
+        self.status_effects.push(effect);
+    }
+
+    /// Add a condition to this attack
+    pub fn add_condition(&mut self, condition: String) {
+        self.conditions.push(condition);
+    }
+
+    /// Set the damage mode for this attack
+    pub fn set_damage_mode(&mut self, mode: DamageMode) {
+        self.damage_mode = Some(mode);
+    }
+
+    /// Set the target type for this attack
+    pub fn set_target_type(&mut self, target: AttackTargetType) {
+        self.target_type = target;
+    }
+
+    /// Calculate the actual damage this attack would deal
+    pub fn calculate_damage(&self, energy_count: u32, coin_results: &[bool]) -> u32 {
+        let mut total_damage = self.damage;
+        
+        if let Some(ref mode) = self.damage_mode {
+            match mode {
+                DamageMode::PerEnergy { per_energy, .. } => {
+                    total_damage += per_energy * energy_count;
+                }
+                DamageMode::CoinFlip { per_heads, .. } => {
+                    let heads_count = coin_results.iter().filter(|&&result| result).count() as u32;
+                    total_damage += per_heads * heads_count;
+                }
+                DamageMode::PerPokemon { per_pokemon, .. } => {
+                    // TODO: Implement when game state is available
+                    total_damage += per_pokemon * 2; // Placeholder
+                }
+                DamageMode::Variable { min, .. } => {
+                    total_damage = *min; // Default to minimum
+                }
+            }
+        }
+        
+        total_damage
+    }
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Ability {
     /// Name of the ability
@@ -291,10 +455,139 @@ mod tests {
             effect: Some(
                 "Flip a coin. If heads, the Defending Pokémon is now Paralyzed.".to_string(),
             ),
+            damage_mode: None,
+            status_effects: vec![StatusEffect {
+                condition: StatusCondition::Paralysis,
+                probability: 50,
+                target: "defending".to_string(),
+            }],
+            conditions: Vec::new(),
+            target_type: AttackTargetType::Active,
         };
 
         pikachu.add_attack(thundershock);
         assert_eq!(pikachu.attacks.len(), 1);
         assert_eq!(pikachu.attacks[0].name, "Thundershock");
+        assert_eq!(pikachu.attacks[0].status_effects.len(), 1);
+        assert_eq!(pikachu.attacks[0].status_effects[0].condition, StatusCondition::Paralysis);
+    }
+
+    #[test]
+    fn test_attack_simple_constructor() {
+        let attack = Attack::simple(
+            "Quick Attack".to_string(),
+            vec![EnergyType::Colorless],
+            20,
+        );
+        
+        assert_eq!(attack.name, "Quick Attack");
+        assert_eq!(attack.damage, 20);
+        assert_eq!(attack.status_effects.len(), 0);
+        assert_eq!(attack.target_type, AttackTargetType::Active);
+    }
+
+    #[test]
+    fn test_attack_with_status() {
+        let attack = Attack::with_status(
+            "Poison Sting".to_string(),
+            vec![EnergyType::Grass],
+            10,
+            StatusCondition::Poison,
+            75,
+        );
+        
+        assert_eq!(attack.name, "Poison Sting");
+        assert_eq!(attack.damage, 10);
+        assert_eq!(attack.status_effects.len(), 1);
+        assert_eq!(attack.status_effects[0].condition, StatusCondition::Poison);
+        assert_eq!(attack.status_effects[0].probability, 75);
+    }
+
+    #[test]
+    fn test_coin_flip_attack() {
+        let attack = Attack::coin_flip_damage(
+            "Double Slap".to_string(),
+            vec![EnergyType::Colorless, EnergyType::Colorless],
+            0,
+            20,
+            2,
+        );
+        
+        assert_eq!(attack.name, "Double Slap");
+        assert_eq!(attack.damage, 0);
+        
+        if let Some(DamageMode::CoinFlip { per_heads, flips }) = &attack.damage_mode {
+            assert_eq!(*per_heads, 20);
+            assert_eq!(*flips, 2);
+        } else {
+            panic!("Expected CoinFlip damage mode");
+        }
+    }
+
+    #[test]
+    fn test_damage_calculation() {
+        // Test fixed damage
+        let simple_attack = Attack::simple(
+            "Tackle".to_string(),
+            vec![EnergyType::Colorless],
+            30,
+        );
+        assert_eq!(simple_attack.calculate_damage(0, &[]), 30);
+        
+        // Test coin flip damage
+        let coin_attack = Attack::coin_flip_damage(
+            "Double Slap".to_string(),
+            vec![EnergyType::Colorless],
+            10,
+            15,
+            2,
+        );
+        // Two heads
+        assert_eq!(coin_attack.calculate_damage(0, &[true, true]), 40);
+        // One head
+        assert_eq!(coin_attack.calculate_damage(0, &[true, false]), 25);
+        // No heads
+        assert_eq!(coin_attack.calculate_damage(0, &[false, false]), 10);
+    }
+
+    #[test]
+    fn test_status_condition_types() {
+        let conditions = vec![
+            StatusCondition::Poison,
+            StatusCondition::Burn,
+            StatusCondition::Paralysis,
+            StatusCondition::Sleep,
+            StatusCondition::Confusion,
+        ];
+        
+        for condition in conditions {
+            let effect = StatusEffect {
+                condition: condition.clone(),
+                probability: 100,
+                target: "defending".to_string(),
+            };
+            assert_eq!(effect.condition, condition);
+        }
+    }
+
+    #[test]
+    fn test_attack_target_types() {
+        let targets = vec![
+            AttackTargetType::Active,
+            AttackTargetType::Choose,
+            AttackTargetType::All,
+            AttackTargetType::Bench,
+            AttackTargetType::Self_,
+        ];
+        
+        for target in targets {
+            let mut attack = Attack::simple(
+                "Test Attack".to_string(),
+                vec![EnergyType::Colorless],
+                10,
+            );
+            attack.set_target_type(target.clone());
+            assert_eq!(attack.target_type, target);
+        }
     }
 }

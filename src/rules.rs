@@ -352,6 +352,7 @@ impl Rule for EnergyAttachmentRule {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::{Game, Player};
 
     #[test]
     fn test_rule_engine_creation() {

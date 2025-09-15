@@ -6,7 +6,7 @@
 //! - Set up a game
 //! - Use the rule engine
 
-use ptcg_core::core::card::EvolutionStage;
+use ptcg_core::core::card::{EvolutionStage, StatusCondition, StatusEffect, AttackTargetType};
 use ptcg_core::events::{ConsoleEventHandler, GameEvent};
 use ptcg_core::rules::GameAction;
 use ptcg_core::*;
@@ -49,6 +49,14 @@ fn main() {
         cost: vec![EnergyType::Lightning, EnergyType::Colorless],
         damage: 30,
         effect: Some("投掷硬币。如果正面，对方的宝可梦陷入麻痹状态。".to_string()),
+        damage_mode: None,
+        status_effects: vec![StatusEffect {
+            condition: StatusCondition::Paralysis,
+            probability: 50,
+            target: "defending".to_string(),
+        }],
+        conditions: Vec::new(),
+        target_type: AttackTargetType::Active,
     });
 
     let pikachu_id = pikachu.id;
