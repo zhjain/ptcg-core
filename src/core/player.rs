@@ -1,6 +1,6 @@
 //! 玩家相关的数据结构和功能
 
-use crate::core::card::{Card, CardId};
+use crate::core::card::{Card, CardId, CardType, EvolutionStage};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -487,6 +487,37 @@ impl Player {
             }
             None
         }
+    }
+
+    /// Find all basic Pokemon cards in the player's hand
+    pub fn find_basic_pokemon_in_hand(&self, card_database: &HashMap<CardId, Card>) -> Vec<CardId> {
+        let mut basic_pokemon = Vec::new();
+        
+        for &card_id in &self.hand {
+            if let Some(card) = card_database.get(&card_id) {
+                // 检查是否是宝可梦卡并且是基础阶段
+                if let CardType::Pokemon { stage: EvolutionStage::Basic, .. } = card.card_type {
+                    basic_pokemon.push(card_id);
+                }
+            }
+        }
+        
+        basic_pokemon
+    }
+
+    /// 从牌库顶部抽取指定数量的卡牌作为奖赏卡
+    pub fn draw_prize_cards(&mut self, count: usize) -> Vec<CardId> {
+        let mut prize_cards = Vec::new();
+        
+        for _ in 0..count {
+            if let Some(card_id) = self.deck.pop() {
+                prize_cards.push(card_id);
+            } else {
+                break;
+            }
+        }
+        
+        prize_cards
     }
 }
 
