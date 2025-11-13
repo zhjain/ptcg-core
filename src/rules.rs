@@ -4,7 +4,8 @@
 //! 强制执行游戏规则，并可以通过自定义规则进行扩展。
 
 use crate::core::player::PlayerId;
-use crate::core::{CardId, Game};
+use crate::core::game::state::Game;
+use crate::core::{CardId};
 use dyn_clone::DynClone;
 use serde::{Deserialize, Serialize};
 
@@ -352,7 +353,8 @@ impl Rule for EnergyAttachmentRule {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{Game, Player};
+    use crate::core::game::state::Game;
+    use crate::core::player::Player;
 
     #[test]
     fn test_rule_engine_creation() {

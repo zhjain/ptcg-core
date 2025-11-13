@@ -626,7 +626,7 @@ fn main() {
                     "   - Current turn: {} (Turn {})",
                     current_player.name, game.turn_number
                 );
-                println!("   - Current phase: {:?}", game.phase);
+                println!("   - Current state: {:?}", game.state);
             }
         }
         Err(e) => {
@@ -634,6 +634,9 @@ fn main() {
             return;
         }
     }
+
+    
+    
 
     // Demonstrate event system
     println!("📢 Testing event system...");
@@ -672,6 +675,7 @@ fn main() {
         println!("   - Deck size: {}", current_player.deck.len());
         println!("   - Prize cards: {}", current_player.prize_cards);
     }
+
 
     println!();
     println!("🎉 Example completed successfully!");

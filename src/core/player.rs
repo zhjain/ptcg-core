@@ -263,11 +263,11 @@ impl Player {
     }
 
     /// Add a special condition to a Pokemon
-    pub fn add_special_condition(&mut self, pokemon_id: CardId, condition: SpecialCondition, duration: i32, current_turn: u32) {
+    pub fn add_special_condition(&mut self, pokemon_id: CardId, condition: SpecialCondition, duration: i32, _current_turn: u32) {
         let instance = SpecialConditionInstance {
             condition,
             duration,
-            applied_turn: current_turn,
+            applied_turn: _current_turn,
             data: std::collections::HashMap::new(),
         };
         

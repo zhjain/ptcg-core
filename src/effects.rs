@@ -4,7 +4,8 @@
 //! 卡牌效果、触发器和条件。
 
 use crate::core::player::PlayerId;
-use crate::core::{CardId, Game};
+use crate::core::game::state::Game;
+use crate::core::{CardId};
 use dyn_clone::DynClone;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
