@@ -536,6 +536,30 @@ impl Player {
         
         prize_cards
     }
+
+    /// 获取指定宝可梦的附加能量类型列表
+    /// 
+    /// # 参数
+    /// * `pokemon_id` - 宝可梦的ID
+    /// * `card_database` - 卡牌数据库，用于查找能量卡的类型
+    /// 
+    /// # 返回值
+    /// 返回附加到该宝可梦的所有能量类型的列表
+    pub fn get_attached_energy_types(&self, pokemon_id: CardId, card_database: &std::collections::HashMap<CardId, Card>) -> Vec<crate::core::card::EnergyType> {
+        let mut energy_types = Vec::new();
+        
+        if let Some(energy_cards) = self.attached_energy.get(&pokemon_id) {
+            for energy_id in energy_cards {
+                if let Some(energy_card) = card_database.get(energy_id) {
+                    if let Some(energy_type) = energy_card.get_energy_type() {
+                        energy_types.push(energy_type.clone());
+                    }
+                }
+            }
+        }
+        
+        energy_types
+    }
 }
 
 #[cfg(test)]

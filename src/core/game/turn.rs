@@ -5,7 +5,7 @@
 //! - Phase advancement
 //! - Win condition checking
 
-use crate::core::game::state::{Game, GameState, GamePhase, GameEvent};
+use crate::core::game::state::{Game, GameEvent, GamePhase, GameState};
 
 impl Game {
     /// Start the game
@@ -27,11 +27,6 @@ impl Game {
 
         self.state = GameState::InProgress;
         self.add_event(GameEvent::GameStarted);
-
-        // Deal opening hands
-        for player in self.players.values_mut() {
-            player.draw_cards(7);
-        }
 
         // Start the first turn
         self.start_turn()?;

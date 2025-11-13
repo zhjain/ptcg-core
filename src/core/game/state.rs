@@ -39,27 +39,6 @@ pub enum GameState {
     Cancelled,
 }
 
-/// Represents the setup phase of the game
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum SetupPhase {
-    /// Initial state - waiting to determine turn order
-    WaitingForTurnOrder,
-    /// Turn order determined - waiting to deal hands
-    WaitingForHands,
-    /// Hands dealt - checking for basic Pokemon
-    CheckingForBasicPokemon,
-    /// Players need to mulligan (no basic Pokemon)
-    MulliganRequired,
-    /// Players selecting active Pokemon
-    SelectingActivePokemon,
-    /// Players setting up bench
-    SettingUpBench,
-    /// Placing prize cards
-    PlacingPrizeCards,
-    /// Setup complete - ready to start game
-    SetupComplete,
-}
-
 /// Game rules and settings
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GameRules {
@@ -98,10 +77,10 @@ pub struct Game {
     pub rules: GameRules,
     /// Game history/log
     pub history: Vec<GameEvent>,
-    /// Players waiting for mulligan after opponent completes setup
-    pub players_waiting_for_mulligan: Vec<PlayerId>,
-    /// Record of mulligan counts for each player
-    pub mulligan_counts: Vec<usize>,
+    /// Player waiting for mulligan after opponent completes setup (only one player can wait at a time)
+    pub player_waiting_for_mulligan: Option<PlayerId>,
+    /// Count of mulligans performed (used for prize card compensation)
+    pub mulligan_count: usize,
 }
 
 /// Events that can occur during a game
@@ -188,8 +167,8 @@ impl Game {
             turn_number: 1,
             rules: GameRules::default(),
             history: Vec::new(),
-            players_waiting_for_mulligan: Vec::new(),
-            mulligan_counts: Vec::new(),
+            player_waiting_for_mulligan: None,
+            mulligan_count: 0,
         }
     }
 

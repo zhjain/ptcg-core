@@ -70,7 +70,6 @@ pub enum GameAction {
         player_id: PlayerId,
         pokemon_id: CardId,
         attack_index: usize,
-        target: Option<CardId>,
     },
     /// Retreat a Pokemon
     Retreat {

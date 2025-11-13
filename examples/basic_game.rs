@@ -188,11 +188,11 @@ fn main() {
     let mut deck = Deck::new("示例牌组".to_string(), "Standard".to_string());
 
     // Add cards to deck
-    deck.add_card(pikachu_id, 10); // 10x Pikachu
-    deck.add_card(charmander_id, 10); // 10x Charmander
-    deck.add_card(bulbasaur_id, 10); // 10x Bulbasaur
-    deck.add_card(squirtle_id, 10); // 10x Squirtle
-    deck.add_card(energy_id, 20); // 20x Lightning Energy (to make 60 cards)
+    deck.add_card(pikachu_id, 4); // 4x Pikachu
+    deck.add_card(charmander_id, 4); // 4x Charmander
+    deck.add_card(bulbasaur_id, 4); // 4x Bulbasaur
+    deck.add_card(squirtle_id, 4); // 4x Squirtle
+    deck.add_card(energy_id, 44); // 20x Lightning Energy (to make 60 cards)
 
     println!("📊 Deck statistics:");
     let stats = deck.get_statistics(&card_database);
@@ -338,102 +338,34 @@ fn main() {
         }
     }
 
-
     // 阶段3: 发放初始手牌
-    match game.deal_opening_hands() {
-        Ok(()) => {
-            println!("✅ Opening hands dealt!");
-
-            // 显示玩家手牌数量
-            for player_id in &game.turn_order {
-                if let Some(player) = game.get_player(*player_id) {
-                    println!("   - {}: {} cards in hand", player.name, player.hand.len());
-                }
+    println!("🃏 Dealing opening hands...");
+    loop {
+        match game.perform_mulligan_for_both_and_check_basic_pokemon() {
+            Ok(ptcg_core::core::game::setup::MulliganResult::AllWithoutBasic) => {
+                println!(
+                    "   ⚠️  Both players have no basic Pokemon, performing mulligan for both..."
+                );
             }
-        }
-        Err(e) => {
-            println!("❌ Failed to deal opening hands: {}", e);
-            return;
-        }
-    }
-
-    // 阶段4: 检查基础宝可梦
-    match game.check_for_basic_pokemon() {
-        Ok(players_without_basic) => {
-            if players_without_basic.is_empty() {
-                println!("✅ All players have basic Pokemon!");
-            } else {
-                println!("⚠️  Some players don't have basic Pokemon:");
-                for &player_id in &players_without_basic {
+            Ok(ptcg_core::core::game::setup::MulliganResult::OneWithoutBasic(player_id)) => {
+                if let Ok(()) = game.mark_player_for_mulligan(player_id) {
                     if let Some(player) = game.get_player(player_id) {
-                        println!("   - {}", player.name);
+                        println!(
+                            "   - {} marked for mulligan after opponent completes setup",
+                            player.name
+                        );
                     }
                 }
-
-                // 按照官方规则书实现穆勒规则
-                println!("🔄 Handling mulligan according to official rules...");
-
-                // 阶段5a: 玩家宣告没有基础宝可梦
-                match game.declare_no_basic_pokemon() {
-                    Ok((players_without_basic, all_without_basic)) => {
-                        if all_without_basic {
-                            // 双方都没有基础宝可梦
-                            println!("   Both players declared no basic Pokemon");
-                            println!("   Checking each other's hands...");
-
-                            // 对于双方都没有基础宝可梦的情况，我们简化处理：
-                            // 直接为所有玩家执行重抽
-                            for &player_id in &players_without_basic {
-                                match game.perform_mulligan(player_id) {
-                                    Ok(()) => {
-                                        if let Some(player) = game.get_player(player_id) {
-                                            println!(
-                                                "   - {} performed mulligan (now has {} cards)",
-                                                player.name,
-                                                player.hand.len()
-                                            );
-                                        }
-                                    }
-                                    Err(e) => {
-                                        println!(
-                                            "   ❌ Failed to perform mulligan for player: {}",
-                                            e
-                                        );
-                                    }
-                                }
-                            }
-                        } else {
-                            // 只有一方没有基础宝可梦
-                            println!("   Only one player declared no basic Pokemon");
-                            println!("   That player waits while the other continues setup...");
-
-                            // 阶段5b: 记录需要等待重抽的玩家
-                            for &player_id in &players_without_basic {
-                                match game.mark_player_for_mulligan(player_id) {
-                                    Ok(()) => {
-                                        if let Some(player) = game.get_player(player_id) {
-                                            println!(
-                                                "   - {} marked for mulligan after opponent completes setup",
-                                                player.name
-                                            );
-                                        }
-                                    }
-                                    Err(e) => {
-                                        println!("   ❌ Failed to mark player for mulligan: {}", e);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        println!("   ❌ Failed to declare no basic Pokemon: {}", e);
-                    }
-                }
+                break;
             }
-        }
-        Err(e) => {
-            println!("❌ Failed to check for basic Pokemon: {}", e);
-            return;
+            Ok(ptcg_core::core::game::setup::MulliganResult::AllWithBasic) => {
+                println!("   ✅ Both players have basic Pokemon!");
+                break;
+            }
+            Err(e) => {
+                println!("❌ Failed to deal opening hands: {}", e);
+                return;
+            }
         }
     }
 
@@ -507,8 +439,7 @@ fn main() {
             };
 
             // 选择最多2只其他基础宝可梦放到备战区（保留1只为活跃宝可梦）
-            let bench_pokemon: Vec<CardId> =
-                basic_pokemon.iter().skip(1).take(2).cloned().collect();
+            let bench_pokemon: Vec<CardId> = basic_pokemon.iter().take(2).cloned().collect();
 
             if !bench_pokemon.is_empty() {
                 // 使用单独的作用域来避免借用冲突
@@ -528,10 +459,94 @@ fn main() {
             }
         }
     }
+    if let Some(player_id) = game.player_waiting_for_mulligan {
+        println!("🔄 Performing pending mulligans for players who declared no basic Pokemon...");
+        loop {
+            // 阶段9: 需要重抽的玩家再次展示手牌
+            println!("   📋 Showing hands to opponent before mulligan:");
+            if let Ok(()) = game.print_player_hand(player_id) {}
 
+            match game.perform_mulligan_and_check_basic_pokemon(player_id) {
+                Ok(true) => {
+                    println!("   ⚠️  Player still has no basic Pokemon after mulligan");
+                    let player_name = {
+                        if let Some(player) = game.get_player(player_id) {
+                            Some(player.name.clone())
+                        } else {
+                            None
+                        }
+                    };
+
+                    if let Some(name) = player_name {
+                        // 再次获取玩家引用以检查手牌
+                        let basic_pokemon = {
+                            if let Some(player) = game.get_player(player_id) {
+                                player.find_basic_pokemon_in_hand(&game.card_database)
+                            } else {
+                                Vec::new()
+                            }
+                        };
+
+                        if !basic_pokemon.is_empty() {
+                            let first_pokemon = basic_pokemon[0];
+                            // 使用单独的作用域来避免借用冲突
+                            let select_result =
+                                { game.select_active_pokemon(player_id, first_pokemon) };
+                            match select_result {
+                                Ok(()) => {
+                                    if let Some(pokemon_card) = game.get_card(first_pokemon) {
+                                        println!(
+                                            "   - {} selected {} as active Pokemon",
+                                            name, pokemon_card.name
+                                        );
+                                    }
+                                }
+                                Err(e) => {
+                                    println!(
+                                        "   ❌ {} failed to select active Pokemon: {}",
+                                        name, e
+                                    );
+                                }
+                            }
+                        }
+                        // 选择最多2只其他基础宝可梦放到备战区（保留1只为活跃宝可梦）
+                        let bench_pokemon: Vec<CardId> =
+                            basic_pokemon.iter().skip(1).take(2).cloned().collect();
+
+                        if !bench_pokemon.is_empty() {
+                            // 使用单独的作用域来避免借用冲突
+                            let setup_result =
+                                { game.setup_bench(player_id, bench_pokemon.clone()) };
+                            match setup_result {
+                                Ok(()) => {
+                                    println!(
+                                        "   - {} placed {} Pokemon on bench",
+                                        name,
+                                        bench_pokemon.len()
+                                    );
+                                }
+                                Err(e) => {
+                                    println!("   ❌ {} failed to setup bench: {}", name, e);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                Ok(false) => {
+                    println!("   ✅ Player now has basic Pokemon after mulligan");
+                }
+                Err(e) => {
+                    println!("❌ Failed to perform pending mulligans: {}", e);
+                    return;
+                }
+            }
+        }
+    }
     // 阶段7: 放置奖赏卡
     match game.place_prize_cards() {
         Ok(()) => {
+            // 执行等待中的重抽操作（如果有的话）
             println!("🏆 Prize cards placed!");
             // 创建turn_order的副本以避免借用冲突
             let player_order = game.turn_order.clone();
@@ -540,84 +555,71 @@ fn main() {
                     println!("   - {}: {} prize cards", player.name, player.prize_cards);
                 }
             }
-
-            // 执行等待中的重抽操作（如果有的话）
-            match game.perform_pending_mulligans() {
-                Ok(()) => {
-                    if !game.players_waiting_for_mulligan.is_empty() {
-                        println!(
-                            "🔄 Performed pending mulligans for players who declared no basic Pokemon"
-                        );
-                    }
-                }
-                Err(e) => {
-                    println!("❌ Failed to perform pending mulligans: {}", e);
-                    return;
-                }
-            }
-
-            // 检查重抽后的结果，如果仍然没有基础宝可梦，需要继续重抽
-            loop {
-                let players_without_basic = match game.check_for_basic_pokemon() {
-                    Ok(players) => players,
+            // 阶段7b: 奖赏卡补偿
+            // 如果对手执行了步骤5.d.（重抽），则可以进行卡牌张数的宣告
+            if let Some(player_id) = game.player_waiting_for_mulligan {
+                println!("🎁 Processing mulligan compensation...");
+                let compensation_limit = match game.get_mulligan_compensation_limit(player_id) {
+                    Ok(limit) => limit,
                     Err(e) => {
-                        println!("❌ Failed to check for basic Pokemon: {}", e);
+                        println!("❌ Failed to get mulligan compensation limit: {}", e);
                         return;
                     }
                 };
 
-                if players_without_basic.is_empty() {
-                    break; // 所有玩家都有基础宝可梦了
-                }
+                if compensation_limit > 0 {
+                    println!(
+                        "🎁 Mulligan compensation available: up to {} cards",
+                        compensation_limit
+                    );
 
-                println!(
-                    "⚠️  Some players still don't have basic Pokemon after mulligan, performing additional mulligans..."
-                );
+                    // 让对手抽取补偿卡牌
+                    // 获取对手的ID（创建turn_order的副本以避免借用冲突）
+                    let turn_order = game.turn_order.clone();
+                    let opponent_id = turn_order
+                        .iter()
+                        .find(|&&id| id != player_id)
+                        .copied()
+                        .unwrap_or_else(|| {
+                            // 如果没找到对手，使用第一个不是当前玩家的玩家
+                            *game.players.keys().find(|&&id| id != player_id).unwrap()
+                        });
 
-                // 为仍然没有基础宝可梦的玩家执行额外的重抽
-                for &player_id in &players_without_basic {
-                    match game.perform_mulligan(player_id) {
-                        Ok(()) => {
-                            if let Some(player) = game.get_player(player_id) {
-                                println!(
-                                    "   - {} performed additional mulligan (now has {} cards)",
-                                    player.name,
-                                    player.hand.len()
-                                );
+                    // 获取对手名称
+                    let opponent_name = if let Some(opponent) = game.get_player(opponent_id) {
+                        opponent.name.clone()
+                    } else {
+                        "Unknown Player".to_string()
+                    };
+
+                    println!(
+                        "🎁 {} can draw up to {} compensation cards",
+                        opponent_name, compensation_limit
+                    );
+
+                    // 简化处理：对手抽取与重抽次数相同的补偿卡牌
+                    // 在实际游戏中，玩家可以选择抽取0到compensation_limit数量的卡牌
+                    match game.mulligan_compensation(opponent_id, compensation_limit) {
+                        Ok(drawn_cards) => {
+                            println!(
+                                "🎁 {} drew {} compensation cards",
+                                opponent_name,
+                                drawn_cards.len()
+                            );
+                            // 显示抽到的卡牌（需要重新获取game引用）
+                            for (index, card_id) in drawn_cards.iter().enumerate() {
+                                if let Some(card) = game.get_card(*card_id) {
+                                    println!("     {}. {} ({})", index + 1, card.name, card_id);
+                                }
                             }
                         }
                         Err(e) => {
-                            println!(
-                                "   ❌ Failed to perform additional mulligan for player: {}",
-                                e
-                            );
-                            return;
+                            println!("❌ Failed to draw compensation cards: {}", e);
                         }
                     }
+                } else {
+                    println!("🎁 No mulligan compensation available");
                 }
-            }
-
-            // 阶段7b: 奖赏卡补偿
-            // 如果对手执行了步骤5.d.（重抽），则可以进行卡牌张数的宣告
-            let compensation_limit = match game.get_mulligan_compensation_limit(game.turn_order[0])
-            {
-                Ok(limit) => limit,
-                Err(e) => {
-                    println!("❌ Failed to get mulligan compensation limit: {}", e);
-                    return;
-                }
-            };
-
-            if compensation_limit > 0 {
-                println!(
-                    "🎁 Mulligan compensation available: up to {} cards",
-                    compensation_limit
-                );
-
-                // 简化处理：玩家抽取补偿卡牌
-                // TODO ....
-            } else {
-                println!("🎁 No mulligan compensation available");
             }
         }
         Err(e) => {
@@ -646,8 +648,11 @@ fn main() {
         }
     }
 
-    
-    
+    println!("🏆 Game is ready to play!");
+
+    if let Ok(()) = game.start() {
+        println!("🚀 Game successfully launched, ready for battle!");
+    }
 
     // Demonstrate event system
     println!("📢 Testing event system...");
@@ -687,6 +692,72 @@ fn main() {
         println!("   - Prize cards: {}", current_player.prize_cards);
     }
 
+    println!();
+
+    // 演示当前玩家执行攻击操作
+    println!("⚔️  Demonstrating attack action...");
+
+    // 获取当前玩家
+    if let Ok(current_player) = game.get_current_player() {
+        let current_player_id = current_player.id;
+        println!("   - Current player: {}", current_player.name);
+
+        // 检查玩家是否有活跃宝可梦
+        if let Some(active_pokemon_id) = current_player.active_pokemon {
+            if let Some(active_pokemon) = game.get_card(active_pokemon_id) {
+                println!("   - Active Pokemon: {}", active_pokemon.name);
+
+                // 获取附加到活跃宝可梦的能量类型
+                let attached_energy_types = current_player.get_attached_energy_types(active_pokemon_id, &game.card_database);
+                println!("   - Attached energy types: {:?}", attached_energy_types);
+
+                // 获取可以使用的攻击
+                let usable_attacks = active_pokemon.get_usable_attacks(&attached_energy_types);
+                
+                if usable_attacks.is_empty() {
+                    println!("   ⚠️  No attacks available due to insufficient energy");
+                } else {
+                    println!("   ✅ Available attacks:");
+                    for (index, attack) in &usable_attacks {
+                        println!("     {}. {} (Cost: {:?})", index + 1, attack.name, attack.cost);
+                    }
+
+                    // 使用第一个可用的攻击作为示例
+                    if let Some((attack_index, attack)) = usable_attacks.first() {
+                        println!("   - Using attack: {} (Index: {})", attack.name, attack_index);
+
+                        // 创建攻击动作
+                        let attack_action = GameAction::UseAttack {
+                            player_id: current_player_id,
+                            pokemon_id: active_pokemon_id,
+                            attack_index: *attack_index,
+                        };
+
+                        // 验证攻击动作是否合法
+                        let violations = rule_engine.validate_action(&game, &attack_action);
+
+                        if violations.is_empty() {
+                            println!("   ✅ Attack action is valid");
+
+                            // 执行攻击动作
+                            // match game.execute_action(&rule_engine, attack_action) {
+                            //     Ok(()) => {
+                            //         println!("   ✅ Attack executed successfully");
+                            //     }
+                            //     Err(e) => {
+                            //         println!("   ❌ Failed to execute attack: {}", e);
+                            //     }
+                            // }
+                        } else {
+                            println!("   ❌ Attack action is invalid: {:?}", violations);
+                        }
+                    }
+                }
+            }
+        } else {
+            println!("   ⚠️  No active Pokemon for current player");
+        }
+    }
 
     println!();
     println!("🎉 Example completed successfully!");

@@ -381,6 +381,50 @@ impl Card {
     pub fn add_metadata(&mut self, key: String, value: String) {
         self.metadata.insert(key, value);
     }
+
+    /// 计算能量类型计数
+    fn count_energy_types(energy_list: &[crate::core::card::EnergyType]) -> std::collections::HashMap<crate::core::card::EnergyType, usize> {
+        let mut counts = std::collections::HashMap::new();
+        for energy_type in energy_list {
+            *counts.entry(energy_type.clone()).or_insert(0) += 1;
+        }
+        counts
+    }
+
+    /// 获取满足能量需求的攻击数组
+    /// 
+    /// # 参数
+    /// * `attached_energy` - 附加到宝可梦的能量类型列表
+    /// 
+    /// # 返回值
+    /// 返回可以使用的攻击列表及其索引
+    pub fn get_usable_attacks(&self, attached_energy: &[crate::core::card::EnergyType]) -> Vec<(usize, &Attack)> {
+        if !self.is_pokemon() {
+            return Vec::new();
+        }
+
+        let attached_counts = Self::count_energy_types(attached_energy);
+        let mut usable_attacks = Vec::new();
+
+        for (index, attack) in self.attacks.iter().enumerate() {
+            let required_counts = Self::count_energy_types(&attack.cost);
+            
+            let mut can_use = true;
+            for (energy_type, &required_count) in &required_counts {
+                let attached_count = attached_counts.get(energy_type).cloned().unwrap_or(0);
+                if attached_count < required_count {
+                    can_use = false;
+                    break;
+                }
+            }
+
+            if can_use {
+                usable_attacks.push((index, attack));
+            }
+        }
+
+        usable_attacks
+    }
 }
 
 #[cfg(test)]
