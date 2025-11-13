@@ -693,7 +693,75 @@ fn main() {
     }
 
     println!();
+// 演示当前玩家附加能量
+    println!("⚡ Demonstrating energy attachment...");
+    
+    // 获取当前玩家
+    if let Ok(current_player) = game.get_current_player() {
+        let current_player_id = current_player.id;
+        println!("   - Current player: {}", current_player.name);
+        
+        // 检查玩家是否有活跃宝可梦
+        if let Some(active_pokemon_id) = current_player.active_pokemon {
+            if let Some(active_pokemon) = game.get_card(active_pokemon_id) {
+                println!("   - Active Pokemon: {}", active_pokemon.name);
+                
+                // 查找玩家手牌中的基础能量卡
+                let energy_cards: Vec<CardId> = current_player.hand.iter()
+                    .filter(|&&card_id| {
+                        if let Some(card) = game.get_card(card_id) {
+                            matches!(card.card_type, CardType::Energy { is_basic: true, .. })
+                        } else {
+                            false
+                        }
+                    })
+                    .cloned()
+                    .collect();
+                
+                if energy_cards.is_empty() {
+                    println!("   ⚠️  No basic energy cards found in hand");
+                } else {
+                    println!("   ✅ Found {} basic energy cards in hand", energy_cards.len());
+                    
+                    // 选择第一张能量卡进行演示
+                    let energy_card_id = energy_cards[0];
+                    if let Some(energy_card) = game.get_card(energy_card_id) {
+                        println!("   - Attaching energy: {}", energy_card.name);
+                        
+                        // 创建附加能量的动作
+                        let attach_action = GameAction::AttachEnergy {
+                            player_id: current_player_id,
+                            pokemon_id: active_pokemon_id,
+                            energy_id: energy_card_id,
+                        };
+                        
+                        // 验证附加能量动作是否合法
+                        let violations = rule_engine.validate_action(&game, &attach_action);
 
+                        if violations.is_empty() {
+                            println!("   ✅ Energy attachment action is valid");
+                            
+                            // 执行附加能量动作
+                            match game.execute_action(&rule_engine, &attach_action) {
+                                Ok(()) => {
+                                    println!("   ✅ Energy attached successfully");
+                                }
+                                Err(e) => {
+                                    println!("   ❌ Failed to attach energy: {:?}", e);
+                                }
+                            }
+                        } else {
+                            println!("   ❌ Energy attachment action is invalid: {:?}", violations);
+                        }
+                    }
+                }
+            }
+        } else {
+            println!("   ⚠️  No active Pokemon for current player");
+        }
+    }
+    
+    println!();
     // 演示当前玩家执行攻击操作
     println!("⚔️  Demonstrating attack action...");
 
@@ -740,14 +808,14 @@ fn main() {
                             println!("   ✅ Attack action is valid");
 
                             // 执行攻击动作
-                            // match game.execute_action(&rule_engine, attack_action) {
-                            //     Ok(()) => {
-                            //         println!("   ✅ Attack executed successfully");
-                            //     }
-                            //     Err(e) => {
-                            //         println!("   ❌ Failed to execute attack: {}", e);
-                            //     }
-                            // }
+                            match game.execute_action(&rule_engine, &attack_action) {
+                                Ok(()) => {
+                                    println!("   ✅ Attack executed successfully");
+                                }
+                                Err(e) => {
+                                    println!("   ❌ Failed to execute attack: {:?}", e);
+                                }
+                            }
                         } else {
                             println!("   ❌ Attack action is invalid: {:?}", violations);
                         }
