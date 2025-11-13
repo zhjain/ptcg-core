@@ -10,6 +10,7 @@
 - 🌐 **网络就绪**: 内置多人游戏支持
 - ⚡ **高性能**: 零成本抽象和编译时优化
 - 🛡️ **内存安全**: 利用 Rust 的所有权系统
+- 🔄 **完整的游戏流程支持**: 包括洗牌、穆勒规则重抽、能量附加、攻击等核心游戏机制
 
 ## 快速开始
 
@@ -116,6 +117,24 @@ if violations.is_empty() {
 }
 ```
 
+### 执行游戏动作
+
+```rust
+use ptcg_core::{GameAction, RuleEngine};
+
+// 创建规则引擎
+let rule_engine = RuleEngine::new();
+
+// 创建抽卡动作
+let draw_action = GameAction::DrawCard { player_id: player1.id };
+
+// 执行动作
+match game.execute_action(&rule_engine, &draw_action) {
+    Ok(()) => println!("抽卡成功！"),
+    Err(violations) => println!("动作违反规则: {:?}", violations),
+}
+```
+
 ## 开发
 
 ### 环境要求
@@ -178,6 +197,8 @@ cargo build --features "database,async"
 - [x] 事件系统
 - [x] 效果系统
 - [x] 数据导入框架
+- [x] 完整的游戏动作执行系统
+- [x] 穆勒规则重抽流程优化
 - [ ] 完整的标准规则实现
 - [ ] 网络多人游戏支持
 - [ ] AI 对手系统

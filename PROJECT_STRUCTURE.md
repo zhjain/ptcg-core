@@ -54,6 +54,7 @@ ptcg-core/
 - `Attack`: 攻击信息结构体
 - `Ability`: 能力信息结构体
 - 相关的辅助方法和构造函数
+- `get_usable_attacks`: 获取满足能量需求的攻击数组方法
 
 #### 1.2 玩家模块 (src/core/player.rs)
 
@@ -63,6 +64,8 @@ ptcg-core/
 - `SpecialConditionInstance`: 特殊状态实例
 - `CardLocation`: 卡牌位置枚举
 - 玩家操作方法（抽卡、放置宝可梦、附加能量等）
+- `shuffle_deck`: 洗牌方法
+- `get_attached_energy_types`: 获取指定宝可梦的附加能量类型列表方法
 
 #### 1.3 牌组模块 (src/core/deck.rs)
 
@@ -89,7 +92,12 @@ ptcg-core/
 - 先后手决定
 - 初始手牌分发
 - 基础宝可梦检查
-- 穆勒规则处理
+- 穆勒规则处理（优化后的重抽与基础宝可梦检查流程）
+- `MulliganResult`: 穆勒规则重抽结果枚举
+- `perform_mulligan_for_both_and_check_basic_pokemon`: 对双方玩家执行重抽并检查基础宝可梦状态
+- `perform_mulligan_and_check_basic_pokemon`: 对指定玩家执行重抽并检查是否包含基础宝可梦
+- `print_player_hand`: 打印玩家手牌，用于穆勒规则重抽时让对手查看
+- `declare_and_perform_mulligan`: 宣告没有基础宝可梦并执行穆勒规则重抽流程
 - 活跃宝可梦选择
 - 备战区设置
 - 奖赏卡放置
@@ -101,14 +109,16 @@ ptcg-core/
 - 胜负条件检查
 
 ##### 1.4.4 游戏动作 (src/core/game/actions.rs)
-- 各种游戏动作的实现（待完善）
+- `shuffle_deck`: 洗牌功能
+- `shuffle_both_decks`: 双人洗牌支持
+- `execute_action`: 游戏动作执行功能（抽卡、附加能量、攻击、结束回合等）
 
 ### 2. 规则引擎模块 (src/rules.rs)
 
 提供灵活的规则验证和执行系统：
 - `Rule`: 规则特质，所有规则都需要实现此特质
 - `RuleEngine`: 规则引擎，管理所有规则
-- `GameAction`: 游戏动作枚举
+- `GameAction`: 游戏动作枚举（更新后的动作类型）
 - `RuleViolation`: 规则违反信息
 - 标准规则实现（回合顺序、手牌限制、能量附加等）
 
@@ -118,7 +128,7 @@ ptcg-core/
 - `Event`: 事件特质
 - `EventHandler`: 事件处理器特质
 - `EventBus`: 事件总线，管理事件分发
-- `GameEvent`: 游戏事件枚举
+- `GameEvent`: 游戏事件枚举（新增洗牌事件等）
 - `ConsoleEventHandler`: 控制台事件处理器（示例）
 
 ### 4. 效果系统模块 (src/effects.rs)
@@ -188,9 +198,10 @@ ptcg-core/
 3. 新的卡牌效果应实现Effect特质并注册到效果管理器
 4. 数据导入功能应实现DataImporter特质
 5. 游戏事件应添加到GameEvent枚举并在适当时候触发
+6. 游戏动作应在actions.rs中实现，并在Game结构体中提供execute_action方法执行
 
 ### 测试
-每个模块都应包含相应的测试用例，放在文件末尾的tests模块中。
+每个模块都应包含相应的测试用例，放在文件末尾的tests模块中。最近添加了针对洗牌功能、游戏动作执行和穆勒规则重抽流程的测试。
 
 ## 构建和运行
 
