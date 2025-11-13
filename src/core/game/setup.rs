@@ -250,6 +250,8 @@ impl Game {
         for card_id in player.hand.drain(..) {
             player.deck.push(card_id);
         }
+        
+        
 
         // 重新抽取7张牌
         player.draw_cards(7);

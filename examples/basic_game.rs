@@ -9,6 +9,7 @@
 use ptcg_core::core::card::{
     AttackTargetType, CardId, EvolutionStage, StatusCondition, StatusEffect,
 };
+use ptcg_core::core::player;
 use ptcg_core::events::{ConsoleEventHandler, GameEvent};
 use ptcg_core::rules::GameAction;
 use ptcg_core::*;
@@ -327,6 +328,16 @@ fn main() {
             return;
         }
     }
+
+    // 双方洗牌
+    match game.shuffle_both_decks() {
+        Ok(()) => println!("✅ Decks shuffled for both players"),
+        Err(e) => {
+            println!("❌ Failed to shuffle decks: {}", e);
+            return;
+        }
+    }
+
 
     // 阶段3: 发放初始手牌
     match game.deal_opening_hands() {

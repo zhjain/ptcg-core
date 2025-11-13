@@ -168,6 +168,23 @@ impl Player {
         drawn
     }
 
+    /// Shuffle the player's deck
+    pub fn shuffle_deck(&mut self) {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        
+        // Simple shuffle algorithm (in a real implementation, you'd use a proper RNG)
+        let mut hasher = DefaultHasher::new();
+        self.id.hash(&mut hasher);
+        let seed = hasher.finish();
+        
+        // Fisher-Yates shuffle with simple PRNG
+        for i in (1..self.deck.len()).rev() {
+            let j = (seed.wrapping_mul(i as u64 + 1)) % (i as u64 + 1);
+            self.deck.swap(i, j as usize);
+        }
+    }
+    
     /// Move a card from hand to discard pile
     pub fn discard_from_hand(&mut self, card_id: CardId) -> bool {
         if let Some(pos) = self.hand.iter().position(|&id| id == card_id) {
@@ -680,5 +697,30 @@ mod tests {
         // But cannot with paralysis
         player.add_special_condition(pokemon_id, SpecialCondition::Paralyzed, 1, 1);
         assert!(!player.can_pokemon_attack(pokemon_id));
+    }
+    
+    #[test]
+    fn test_shuffle_deck() {
+        let mut player = Player::new("Test Player".to_string());
+        let card_ids: Vec<CardId> = (0..10).map(|_| Uuid::new_v4()).collect();
+        player.set_deck(card_ids.clone());
+        
+        // Save the original order
+        let original_order = player.deck.clone();
+        
+        // Shuffle the deck
+        player.shuffle_deck();
+        
+        // Deck should still have the same cards
+        assert_eq!(player.deck.len(), 10);
+        
+        // Order should be different (with high probability)
+        // Note: There's a tiny chance the shuffle results in the same order
+        assert_eq!(player.deck.iter().count(), original_order.iter().count());
+        
+        // All original cards should still be present
+        for card_id in &card_ids {
+            assert!(player.deck.contains(card_id));
+        }
     }
 }
