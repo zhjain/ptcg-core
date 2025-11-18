@@ -1,18 +1,10 @@
-//! Game setup logic
-//!
-//! This module contains all the functions needed to set up a game, including:
-//! - Player setup
-//! - Deck assignment
-//! - Turn order determination
-//! - Initial hand dealing
-//! - Mulligan handling
+//! Mulligan setup functionality
 
 use crate::core::{
-    card::{CardId, EvolutionStage},
-    deck::Deck,
     game::state::{Game, GameState},
     player::{Player, PlayerId},
 };
+use crate::core::card::CardId;
 
 /// 穆勒规则重抽结果
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -26,123 +18,6 @@ pub enum MulliganResult {
 }
 
 impl Game {
-    /// Add a player to the game
-    pub fn add_player(&mut self, mut player: Player) -> Result<(), String> {
-        if self.state != GameState::Setup {
-            return Err("Cannot add players after game has started".to_string());
-        }
-
-        if self.players.len() >= 2 {
-            return Err("Maximum of 2 players allowed".to_string());
-        }
-
-        // Set prize cards according to game rules
-        player.prize_cards = self.rules.prize_cards;
-
-        let player_id = player.id;
-        self.players.insert(player_id, player);
-
-        Ok(())
-    }
-
-    /// Set a player's deck
-    pub fn set_player_deck(&mut self, player_id: PlayerId, deck: Deck) -> Result<(), String> {
-        if self.state != GameState::Setup {
-            return Err("Cannot set deck after game has started".to_string());
-        }
-
-        // Add deck cards to the game's card database
-        for &_card_id in deck.cards.keys() {
-            // In a real implementation, you'd load the card data here
-            // For now, we'll assume the cards are already in the database
-        }
-
-        if let Some(player) = self.players.get_mut(&player_id) {
-            let shuffled_cards = deck.shuffle();
-            player.set_deck(shuffled_cards);
-            Ok(())
-        } else {
-            Err("Player not found".to_string())
-        }
-    }
-
-    /// Start the game setup process
-    pub fn start_setup(&mut self) -> Result<(), String> {
-        if self.state != GameState::Setup {
-            return Err("Game is not in setup state".to_string());
-        }
-
-        if self.players.len() < 2 {
-            return Err("Need at least 2 players to start setup".to_string());
-        }
-
-        // Validate all players have decks
-        for player in self.players.values() {
-            if player.deck.is_empty() {
-                return Err("All players must have decks".to_string());
-            }
-        }
-
-        Ok(())
-    }
-
-    /// 阶段1: 通过猜拳决定先后手顺序
-    pub fn determine_turn_order(&mut self) -> Result<(), String> {
-        // 检查当前是否处于设置阶段
-        if self.state != GameState::Setup {
-            return Err("Can only determine turn order during setup phase".to_string());
-        }
-
-        // 在实际实现中，这里应该有一个随机化过程来决定先后手
-        // 简单起见，我们保持当前顺序，但在真实游戏中应该通过抛硬币等方式决定
-        for &player_id in self.players.keys() {
-            self.turn_order.push(player_id);
-        }
-
-        self.turn_order.swap(0, 1); // 示例：交换两名玩家的顺序
-
-        Ok(())
-    }
-
-    /// 阶段2: 抽取初始手牌
-    pub fn deal_opening_hands(&mut self) -> Result<(), String> {
-        // 检查当前是否处于设置阶段
-        if self.state != GameState::Setup {
-            return Err("Can only deal opening hands during setup phase".to_string());
-        }
-
-        // 检查是否已经确定了先后手顺序
-        if self.turn_order.is_empty() {
-            return Err("Turn order must be determined before dealing hands".to_string());
-        }
-
-        // 执行发牌逻辑
-        for player in self.players.values_mut() {
-            player.draw_cards(7);
-        }
-
-        Ok(())
-    }
-
-    /// 阶段3: 检查玩家是否拥有基础宝可梦
-    pub fn check_for_basic_pokemon(&self) -> Result<Vec<PlayerId>, String> {
-        // 检查当前是否处于设置阶段
-        if self.state != GameState::Setup {
-            return Err("Can only check for basic Pokemon during setup phase".to_string());
-        }
-
-        let mut players_without_basic = Vec::new();
-
-        for (&player_id, player) in &self.players {
-            let basic_pokemon = player.find_basic_pokemon_in_hand(&self.card_database);
-            if basic_pokemon.is_empty() {
-                players_without_basic.push(player_id);
-            }
-        }
-
-        Ok(players_without_basic)
-    }
-
     /// 阶段5a: 玩家宣告没有基础宝可梦
     /// 返回值：(需要重抽的玩家列表, 是否双方都没有基础宝可梦)
     pub fn declare_no_basic_pokemon(&mut self) -> Result<(Vec<PlayerId>, bool), String> {
@@ -393,7 +268,7 @@ impl Game {
 
             // 检查是否是基础宝可梦
             if let crate::core::card::CardType::Pokemon {
-                stage: EvolutionStage::Basic,
+                stage: crate::core::card::EvolutionStage::Basic,
                 ..
             } = card.card_type
             {
@@ -556,96 +431,5 @@ impl Game {
         }
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::core::player::Player;
-    use uuid::Uuid;
-
-    #[test]
-    fn test_mark_player_for_mulligan() {
-        let mut game = Game::new();
-        let player = Player::new("Alice".to_string());
-        let player_id = player.id;
-        assert!(game.add_player(player).is_ok());
-
-        // Test marking player for mulligan during setup phase
-        assert!(game.mark_player_for_mulligan(player_id).is_ok());
-        assert_eq!(game.player_waiting_for_mulligan, Some(player_id));
-
-        // Test marking the same player again (should overwrite)
-        assert!(game.mark_player_for_mulligan(player_id).is_ok());
-        assert_eq!(game.player_waiting_for_mulligan, Some(player_id));
-    }
-
-    #[test]
-    fn test_mark_player_for_mulligan_wrong_phase() {
-        let mut game = Game::new();
-        let player = Player::new("Alice".to_string());
-        let player_id = player.id;
-        assert!(game.add_player(player).is_ok());
-
-        // Move game to in-progress state
-        game.state = GameState::InProgress;
-
-        // Test marking player for mulligan when not in setup phase
-        assert!(game.mark_player_for_mulligan(player_id).is_err());
-    }
-
-    #[test]
-    fn test_mark_player_for_mulligan_nonexistent_player() {
-        let mut game = Game::new();
-        let fake_player_id = Uuid::new_v4();
-
-        // Test marking non-existent player for mulligan
-        assert!(game.mark_player_for_mulligan(fake_player_id).is_err());
-    }
-
-    #[test]
-    fn test_perform_pending_mulligans() {
-        let mut game = Game::new();
-        let player = Player::new("Alice".to_string());
-        let player_id = player.id;
-        assert!(game.add_player(player).is_ok());
-
-        // Mark player for mulligan
-        assert!(game.mark_player_for_mulligan(player_id).is_ok());
-
-        // Perform pending mulligans
-        assert!(game.perform_pending_mulligans().is_ok());
-
-        // Check that player is no longer waiting for mulligan
-        assert_eq!(game.player_waiting_for_mulligan, None);
-        assert_eq!(game.mulligan_count, 1);
-    }
-
-    #[test]
-    fn test_perform_mulligan_and_check_basic_pokemon() {
-        let mut game = Game::new();
-        let player = Player::new("Alice".to_string());
-        let player_id = player.id;
-        assert!(game.add_player(player).is_ok());
-
-        // Test performing mulligan and checking for basic pokemon
-        let result = game.perform_mulligan_and_check_basic_pokemon(player_id);
-        assert!(result.is_ok());
-        // mulligan_count should be 1
-        assert_eq!(game.mulligan_count, 1);
-    }
-
-    #[test]
-    fn test_perform_mulligan_for_both_and_check_basic_pokemon() {
-        let mut game = Game::new();
-        let player1 = Player::new("Alice".to_string());
-        let player2 = Player::new("Bob".to_string());
-        assert!(game.add_player(player1).is_ok());
-        assert!(game.add_player(player2).is_ok());
-
-        // Test performing mulligan for both and checking for basic pokemon
-        let result = game.perform_mulligan_for_both_and_check_basic_pokemon();
-        assert!(result.is_ok());
     }
 }

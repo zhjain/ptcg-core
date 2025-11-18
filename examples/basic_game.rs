@@ -7,8 +7,9 @@
 //! - Use the rule engine
 
 use ptcg_core::core::card::{
-    AttackTargetType, CardId, EvolutionStage, StatusCondition, StatusEffect,
+    AttackTargetType, CardId, EvolutionStage, EnergyType, CardType, CardRarity,
 };
+use ptcg_core::core::player::SpecialCondition;
 use ptcg_core::events::{ConsoleEventHandler, GameEvent};
 use ptcg_core::rules::GameAction;
 use ptcg_core::*;
@@ -52,11 +53,7 @@ fn main() {
         damage: 30,
         effect: Some("投掷硬币。如果正面，对方的宝可梦陷入麻痹状态。".to_string()),
         damage_mode: None,
-        status_effects: vec![StatusEffect {
-            condition: StatusCondition::Paralysis,
-            probability: 50,
-            target: "defending".to_string(),
-        }],
+        status_effects: vec![],
         conditions: Vec::new(),
         target_type: AttackTargetType::Active,
     });
@@ -88,11 +85,7 @@ fn main() {
         damage: 20,
         effect: Some("投掷硬币。如果正面，对方的宝可梦陷入灼伤状态。".to_string()),
         damage_mode: None,
-        status_effects: vec![StatusEffect {
-            condition: StatusCondition::Burn,
-            probability: 50,
-            target: "defending".to_string(),
-        }],
+        status_effects: vec![],
         conditions: Vec::new(),
         target_type: AttackTargetType::Active,
     });
@@ -464,7 +457,6 @@ fn main() {
             // 阶段9: 需要重抽的玩家再次展示手牌
             println!("   📋 Showing hands to opponent before mulligan:");
             if let Ok(()) = game.print_player_hand(player_id) {}
-
             match game.perform_mulligan_and_check_basic_pokemon(player_id) {
                 Ok(true) => {
                     println!("   ⚠️  Player still has no basic Pokemon after mulligan");
@@ -598,26 +590,17 @@ fn main() {
 
                     // 简化处理：对手抽取与重抽次数相同的补偿卡牌
                     // 在实际游戏中，玩家可以选择抽取0到compensation_limit数量的卡牌
-                    match game.mulligan_compensation(opponent_id, compensation_limit) {
-                        Ok(drawn_cards) => {
-                            println!(
-                                "🎁 {} drew {} compensation cards",
-                                opponent_name,
-                                drawn_cards.len()
-                            );
-                            // 显示抽到的卡牌（需要重新获取game引用）
-                            for (index, card_id) in drawn_cards.iter().enumerate() {
-                                if let Some(card) = game.get_card(*card_id) {
-                                    println!("     {}. {} ({})", index + 1, card.name, card_id);
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            println!("❌ Failed to draw compensation cards: {}", e);
-                        }
-                    }
-                } else {
-                    println!("🎁 No mulligan compensation available");
+                    // match game.draw_cards_for_player(opponent_id, compensation_limit) {
+                    //     Ok(()) => {
+                    //         println!(
+                    //             "   ✅ {} drew {} compensation cards",
+                    //             opponent_name, compensation_limit
+                    //         );
+                    //     }
+                    //     Err(e) => {
+                    //         println!("   ❌ Failed to draw compensation cards: {}", e);
+                    //     }
+                    // }
                 }
             }
         }
@@ -627,222 +610,44 @@ fn main() {
         }
     }
 
-    // 阶段8: 完成设置，开始游戏
-    match game.complete_setup() {
+    // 阶段8: 游戏开始
+    match game.start() {
         Ok(()) => {
-            println!("🎉 Game setup completed! Game started!");
-
-            // 显示当前回合信息
-            if let Ok(current_player) = game.get_current_player() {
-                println!(
-                    "   - Current turn: {} (Turn {})",
-                    current_player.name, game.turn_number
-                );
-                println!("   - Current state: {:?}", game.state);
+            println!("🎮 Game started successfully!");
+            println!("   - Current turn: {}", game.turn_number);
+            println!("   - Current phase: {:?}", game.phase);
+            if let Some(current_player_id) = game.get_current_player_id().ok() {
+                if let Some(player) = game.get_player(current_player_id) {
+                    println!("   - Current player: {}", player.name);
+                }
             }
         }
         Err(e) => {
-            println!("❌ Failed to complete setup: {}", e);
+            println!("❌ Failed to start game: {}", e);
             return;
         }
     }
 
-    println!("🏆 Game is ready to play!");
-
-    if let Ok(()) = game.start() {
-        println!("🚀 Game successfully launched, ready for battle!");
-    }
-
-    // Demonstrate event system
-    println!("📢 Testing event system...");
-    let mut event_bus = EventBus::new();
-
-    // Register a console event handler
-    let console_handler = ConsoleEventHandler::new(false);
-    event_bus.register_handler(console_handler);
-
-    // Emit some events
-    let event = GameEvent::GameStarted {
-        timestamp: ptcg_core::events::current_timestamp(),
-        players: vec![player1_id, player2_id],
-    };
-    event_bus.emit(&event);
-
-    let event = GameEvent::TurnStarted {
-        timestamp: ptcg_core::events::current_timestamp(),
-        player_id: player1_id,
-        turn_number: 1,
-    };
-    event_bus.emit(&event);
-
-    println!("   - Events in history: {}", event_bus.get_history().len());
-    println!();
-
-    // Show some game information
-    println!("ℹ️  Game Information:");
-    println!("   - Current state: {:?}", game.state);
+    // 显示游戏状态
+    println!("\n📋 Game State Summary:");
+    println!("   - Game ID: {}", game.id);
+    println!("   - Current turn: {}", game.turn_number);
     println!("   - Current phase: {:?}", game.phase);
-    println!("   - Turn number: {}", game.turn_number);
-
-    if let Ok(current_player) = game.get_current_player() {
-        println!("   - Current player: {}", current_player.name);
-        println!("   - Hand size: {}", current_player.hand.len());
-        println!("   - Deck size: {}", current_player.deck.len());
-        println!("   - Prize cards: {}", current_player.prize_cards);
-    }
-
-    println!();
-    // 演示当前玩家附加能量
-    println!("⚡ Demonstrating energy attachment...");
-
-    // 获取当前玩家
-    if let Ok(current_player) = game.get_current_player() {
-        let current_player_id = current_player.id;
-        println!("   - Current player: {}", current_player.name);
-
-        // 检查玩家是否有活跃宝可梦
-        if let Some(active_pokemon_id) = current_player.active_pokemon {
-            if let Some(active_pokemon) = game.get_card(active_pokemon_id) {
-                println!("   - Active Pokemon: {}", active_pokemon.name);
-
-                // 查找玩家手牌中的基础能量卡
-                let energy_cards: Vec<CardId> = current_player
-                    .hand
-                    .iter()
-                    .filter(|&&card_id| {
-                        if let Some(card) = game.get_card(card_id) {
-                            matches!(card.card_type, CardType::Energy { is_basic: true, .. })
-                        } else {
-                            false
-                        }
-                    })
-                    .cloned()
-                    .collect();
-
-                if energy_cards.is_empty() {
-                    println!("   ⚠️  No basic energy cards found in hand");
-                } else {
-                    println!(
-                        "   ✅ Found {} basic energy cards in hand",
-                        energy_cards.len()
-                    );
-
-                    // 选择第一张能量卡进行演示
-                    let energy_card_id = energy_cards[0];
-                    if let Some(energy_card) = game.get_card(energy_card_id) {
-                        println!("   - Attaching energy: {}", energy_card.name);
-
-                        // 创建附加能量的动作
-                        let attach_action = GameAction::AttachEnergy {
-                            player_id: current_player_id,
-                            pokemon_id: active_pokemon_id,
-                            energy_id: energy_card_id,
-                        };
-
-                        // 验证附加能量动作是否合法
-                        let violations = rule_engine.validate_action(&game, &attach_action);
-
-                        if violations.is_empty() {
-                            println!("   ✅ Energy attachment action is valid");
-
-                            // 执行附加能量动作
-                            match game.execute_action(&rule_engine, &attach_action) {
-                                Ok(()) => {
-                                    println!("   ✅ Energy attached successfully");
-                                }
-                                Err(e) => {
-                                    println!("   ❌ Failed to attach energy: {:?}", e);
-                                }
-                            }
-                        } else {
-                            println!(
-                                "   ❌ Energy attachment action is invalid: {:?}",
-                                violations
-                            );
-                        }
-                    }
+    
+    // 显示玩家状态
+    for player_id in &game.turn_order {
+        if let Some(player) = game.get_player(*player_id) {
+            println!("   - Player: {} ({})", player.name, player_id);
+            println!("     * Hand size: {}", player.hand.len());
+            println!("     * Prize cards: {}", player.prize_cards);
+            if let Some(active_pokemon_id) = player.active_pokemon {
+                if let Some(card) = game.get_card(active_pokemon_id) {
+                    println!("     * Active Pokemon: {}", card.name);
                 }
             }
-        } else {
-            println!("   ⚠️  No active Pokemon for current player");
+            println!("     * Bench Pokemon: {}", player.bench.len());
         }
     }
 
-    println!();
-    // 演示当前玩家执行攻击操作
-    println!("⚔️  Demonstrating attack action...");
-
-    // 获取当前玩家
-    if let Ok(current_player) = game.get_current_player() {
-        let current_player_id = current_player.id;
-        println!("   - Current player: {}", current_player.name);
-
-        // 检查玩家是否有活跃宝可梦
-        if let Some(active_pokemon_id) = current_player.active_pokemon {
-            if let Some(active_pokemon) = game.get_card(active_pokemon_id) {
-                println!("   - Active Pokemon: {}", active_pokemon.name);
-
-                // 获取附加到活跃宝可梦的能量类型
-                let attached_energy_types = current_player
-                    .get_attached_energy_types(active_pokemon_id, &game.card_database);
-                println!("   - Attached energy types: {:?}", attached_energy_types);
-
-                // 获取可以使用的攻击
-                let usable_attacks = active_pokemon.get_usable_attacks(&attached_energy_types);
-
-                if usable_attacks.is_empty() {
-                    println!("   ⚠️  No attacks available due to insufficient energy");
-                } else {
-                    println!("   ✅ Available attacks:");
-                    for (index, attack) in &usable_attacks {
-                        println!(
-                            "     {}. {} (Cost: {:?})",
-                            index + 1,
-                            attack.name,
-                            attack.cost
-                        );
-                    }
-
-                    // 使用第一个可用的攻击作为示例
-                    if let Some((attack_index, attack)) = usable_attacks.first() {
-                        println!(
-                            "   - Using attack: {} (Index: {})",
-                            attack.name, attack_index
-                        );
-
-                        // 创建攻击动作
-                        let attack_action = GameAction::UseAttack {
-                            player_id: current_player_id,
-                            pokemon_id: active_pokemon_id,
-                            attack_index: *attack_index,
-                        };
-
-                        // 验证攻击动作是否合法
-                        let violations = rule_engine.validate_action(&game, &attack_action);
-
-                        if violations.is_empty() {
-                            println!("   ✅ Attack action is valid");
-
-                            // 执行攻击动作
-                            match game.execute_action(&rule_engine, &attack_action) {
-                                Ok(()) => {
-                                    println!("   ✅ Attack executed successfully");
-                                }
-                                Err(e) => {
-                                    println!("   ❌ Failed to execute attack: {:?}", e);
-                                }
-                            }
-                        } else {
-                            println!("   ❌ Attack action is invalid: {:?}", violations);
-                        }
-                    }
-                }
-            }
-        } else {
-            println!("   ⚠️  No active Pokemon for current player");
-        }
-    }
-
-    println!();
-    println!("🎉 Example completed successfully!");
+    println!("\n🎉 Example completed successfully!");
 }

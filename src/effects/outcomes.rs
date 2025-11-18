@@ -1,0 +1,1 @@
+//! Effect outcomes and results

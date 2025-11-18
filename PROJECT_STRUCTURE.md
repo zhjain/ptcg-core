@@ -2,38 +2,83 @@
 
 ## 项目概述
 
-PTCG Core 是一个使用 Rust 编写的宝可梦集换式卡牌游戏(Pokemon Trading Card Game)核心引擎。该项目采用模块化设计，提供了卡牌数据结构、游戏规则引擎、事件系统、效果系统和数据导入导出功能。
+PTCG Core 是一个使用 Rust 编写的宝可梦集换式卡牌游戏(Pokemon Trading Card Game)核心引擎。该项目采用模块化设计，提供了卡牌数据结构、游戏规则引擎、事件系统、效果系统和数据导入导出功能。当前测试覆盖率为11.79%。
 
 ## 目录结构
 
 ```
 ptcg-core/
-├── examples/              # 使用示例
-├── src/                   # 源代码目录
-│   ├── core/              # 核心数据结构
-│   │   ├── game/          # 游戏相关模块
-│   │   │   ├── actions.rs # 游戏动作实现
-│   │   │   ├── mod.rs     # 游戏模块声明
-│   │   │   ├── setup.rs   # 游戏设置逻辑
-│   │   │   ├── state.rs   # 游戏状态管理
-│   │   │   └── turn.rs    # 回合处理逻辑
-│   │   ├── card.rs        # 卡牌数据结构
-│   │   ├── deck.rs        # 牌组管理
-│   │   ├── mod.rs         # 核心模块声明
-│   │   └── player.rs      # 玩家数据结构
-│   ├── data/              # 数据导入/导出模块
-│   │   ├── csv.rs         # CSV数据导入
-│   │   ├── database.rs    # 数据库导入
-│   │   ├── json.rs        # JSON数据导入/导出
-│   │   └── mod.rs         # 数据模块声明
-│   ├── effects.rs         # 卡牌效果系统
-│   ├── events.rs          # 事件系统
-│   ├── lib.rs             # 库入口和重新导出
-│   ├── network.rs         # 网络功能(可选)
-│   └── rules.rs           # 规则引擎系统
-├── Cargo.toml             # 项目配置文件
-├── README.md              # 项目说明文档
-└── TODO.md                # 开发待办事项
+├── examples/                 # 使用示例
+├── src/                      # 源代码目录
+│   ├── core/                 # 核心数据结构
+│   │   ├── card/             # 卡牌相关模块
+│   │   │   ├── abilities.rs  # 卡牌能力
+│   │   │   ├── attacks.rs    # 卡牌攻击
+│   │   │   ├── energy.rs     # 能量卡牌
+│   │   │   ├── mod.rs        # 卡牌模块声明
+│   │   │   ├── pokemon.rs    # 宝可梦卡牌
+│   │   │   ├── trainer.rs    # 训练家卡牌
+│   │   │   └── types.rs      # 卡牌类型定义
+│   │   ├── deck/             # 牌组相关模块
+│   │   │   ├── manager.rs    # 牌组管理
+│   │   │   ├── mod.rs        # 牌组模块声明
+│   │   │   └── validation.rs # 牌组验证
+│   │   ├── game/             # 游戏相关模块
+│   │   │   ├── actions/      # 游戏动作
+│   │   │   │   ├── attack_actions.rs  # 攻击动作
+│   │   │   │   ├── card_actions.rs    # 卡牌动作
+│   │   │   │   ├── energy_actions.rs  # 能量动作
+│   │   │   │   ├── execution.rs       # 动作执行
+│   │   │   │   └── mod.rs             # 动作模块声明
+│   │   │   ├── setup/        # 游戏设置
+│   │   │   │   ├── deck_setup.rs      # 牌组设置
+│   │   │   │   ├── mod.rs             # 设置模块声明
+│   │   │   │   ├── mulligan_setup.rs  # 穆勒规则设置
+│   │   │   │   ├── player_setup.rs    # 玩家设置
+│   │   │   │   ├── pokemon_setup.rs   # 宝可梦设置
+│   │   │   │   └── turn_setup.rs      # 回合设置
+│   │   │   ├── events.rs     # 游戏事件
+│   │   │   ├── mod.rs        # 游戏模块声明
+│   │   │   ├── state.rs      # 游戏状态管理
+│   │   │   └── turn.rs       # 回合处理逻辑
+│   │   ├── player/           # 玩家相关模块
+│   │   │   ├── actions.rs    # 玩家动作
+│   │   │   ├── conditions.rs # 玩家状态条件
+│   │   │   ├── mod.rs        # 玩家模块声明
+│   │   │   └── state.rs      # 玩家状态管理
+│   │   └── mod.rs            # 核心模块声明
+│   ├── data/                 # 数据导入/导出模块
+│   │   ├── csv.rs            # CSV数据导入
+│   │   ├── database.rs       # 数据库导入
+│   │   ├── export.rs         # 数据导出
+│   │   ├── import.rs         # 数据导入
+│   │   ├── json.rs           # JSON数据导入/导出
+│   │   └── mod.rs            # 数据模块声明
+│   ├── effects/              # 卡牌效果系统
+│   │   ├── manager.rs        # 效果管理器
+│   │   ├── mod.rs            # 效果模块声明
+│   │   ├── outcomes.rs       # 效果结果
+│   │   ├── targets.rs        # 效果目标
+│   │   └── types.rs          # 效果类型
+│   ├── events/               # 事件系统
+│   │   ├── bus.rs            # 事件总线
+│   │   ├── handlers.rs       # 事件处理器
+│   │   ├── mod.rs            # 事件模块声明
+│   │   └── types.rs          # 事件类型
+│   ├── lib.rs                # 库入口和重新导出
+│   ├── network/              # 网络功能(可选)
+│   │   ├── client.rs         # 网络客户端
+│   │   ├── mod.rs            # 网络模块声明
+│   │   └── server.rs         # 网络服务器
+│   └── rules/                # 规则引擎系统
+│       ├── effects.rs        # 规则效果
+│       ├── engine.rs         # 规则引擎
+│       ├── mod.rs            # 规则模块声明
+│       ├── standard.rs       # 标准规则
+│       └── validation.rs     # 规则验证
+├── Cargo.toml                # 项目配置文件
+├── README.md                 # 项目说明文档
+└── TODO.md                   # 开发待办事项
 ```
 
 ## 各模块详细说明
@@ -42,38 +87,28 @@ ptcg-core/
 
 核心模块包含了游戏的基础数据结构和主要实体。
 
-#### 1.1 卡牌模块 (src/core/card.rs)
+#### 1.1 卡牌模块 (src/core/card/)
 
 包含所有与卡牌相关的数据结构和功能：
-- `Card`: 主要的卡牌结构体，包含卡牌的所有属性
-- `CardType`: 卡牌类型枚举（宝可梦、能量、训练家）
-- `EnergyType`: 能量类型枚举
-- `EvolutionStage`: 进化阶段枚举
-- `TrainerType`: 训练家卡类型枚举
-- `CardRarity`: 卡牌稀有度枚举
-- `Attack`: 攻击信息结构体
-- `Ability`: 能力信息结构体
-- 相关的辅助方法和构造函数
-- `get_usable_attacks`: 获取满足能量需求的攻击数组方法
+- `abilities.rs`: 卡牌能力定义
+- `attacks.rs`: 攻击信息结构体和相关方法
+- `energy.rs`: 能量卡牌相关功能（待实现）
+- `pokemon.rs`: 宝可梦卡牌结构体和方法
+- `trainer.rs`: 训练家卡牌相关功能（待实现）
+- `types.rs`: 卡牌类型枚举（CardType, EnergyType, EvolutionStage, TrainerType, CardRarity）
 
-#### 1.2 玩家模块 (src/core/player.rs)
+#### 1.2 玩家模块 (src/core/player/)
 
 管理玩家状态和操作：
-- `Player`: 玩家结构体，包含玩家的所有状态信息
-- `SpecialCondition`: 特殊状态条件枚举（中毒、麻痹等）
-- `SpecialConditionInstance`: 特殊状态实例
-- `CardLocation`: 卡牌位置枚举
-- 玩家操作方法（抽卡、放置宝可梦、附加能量等）
-- `shuffle_deck`: 洗牌方法
-- `get_attached_energy_types`: 获取指定宝可梦的附加能量类型列表方法
+- `actions.rs`: 玩家可执行的动作
+- `conditions.rs`: 玩家特殊状态条件（中毒、麻痹等）
+- `state.rs`: 玩家结构体，包含玩家的所有状态信息和操作方法
 
-#### 1.3 牌组模块 (src/core/deck.rs)
+#### 1.3 牌组模块 (src/core/deck/)
 
 处理牌组构建和验证：
-- `Deck`: 牌组结构体
-- `DeckValidationError`: 牌组验证错误枚举
-- 牌组操作方法（添加/移除卡牌、验证等）
-- 牌组统计和导出功能
+- `manager.rs`: 牌组结构体和基本操作方法
+- `validation.rs`: 牌组验证规则和错误类型
 
 #### 1.4 游戏模块 (src/core/game/)
 
@@ -86,21 +121,12 @@ ptcg-core/
 - `GameRules`: 游戏规则配置
 - `GameEvent`: 游戏事件枚举
 
-##### 1.4.2 游戏设置 (src/core/game/setup.rs)
-- 玩家加入游戏
-- 牌组设置
-- 先后手决定
-- 初始手牌分发
-- 基础宝可梦检查
-- 穆勒规则处理（优化后的重抽与基础宝可梦检查流程）
-- `MulliganResult`: 穆勒规则重抽结果枚举
-- `perform_mulligan_for_both_and_check_basic_pokemon`: 对双方玩家执行重抽并检查基础宝可梦状态
-- `perform_mulligan_and_check_basic_pokemon`: 对指定玩家执行重抽并检查是否包含基础宝可梦
-- `print_player_hand`: 打印玩家手牌，用于穆勒规则重抽时让对手查看
-- `declare_and_perform_mulligan`: 宣告没有基础宝可梦并执行穆勒规则重抽流程
-- 活跃宝可梦选择
-- 备战区设置
-- 奖赏卡放置
+##### 1.4.2 游戏设置 (src/core/game/setup/)
+- `deck_setup.rs`: 牌组设置相关功能
+- `mulligan_setup.rs`: 穆勒规则处理（优化后的重抽与基础宝可梦检查流程）
+- `player_setup.rs`: 玩家加入游戏和设置
+- `pokemon_setup.rs`: 宝可梦相关设置（活跃宝可梦选择、备战区设置）
+- `turn_setup.rs`: 先后手决定
 
 ##### 1.4.3 回合处理 (src/core/game/turn.rs)
 - 游戏开始
@@ -108,38 +134,34 @@ ptcg-core/
 - 阶段推进
 - 胜负条件检查
 
-##### 1.4.4 游戏动作 (src/core/game/actions.rs)
-- `shuffle_deck`: 洗牌功能
-- `shuffle_both_decks`: 双人洗牌支持
-- `execute_action`: 游戏动作执行功能（抽卡、附加能量、攻击、结束回合等）
+##### 1.4.4 游戏动作 (src/core/game/actions/)
+- `attack_actions.rs`: 攻击相关动作
+- `card_actions.rs`: 卡牌相关动作
+- `energy_actions.rs`: 能量相关动作
+- `execution.rs`: 游戏动作执行功能（抽卡、附加能量、攻击、结束回合等）
 
-### 2. 规则引擎模块 (src/rules.rs)
+### 2. 规则引擎模块 (src/rules/)
 
 提供灵活的规则验证和执行系统：
-- `Rule`: 规则特质，所有规则都需要实现此特质
-- `RuleEngine`: 规则引擎，管理所有规则
-- `GameAction`: 游戏动作枚举（更新后的动作类型）
-- `RuleViolation`: 规则违反信息
-- 标准规则实现（回合顺序、手牌限制、能量附加等）
+- `engine.rs`: 规则引擎核心功能（Rule特质、RuleEngine、GameAction枚举、RuleViolation等）
+- `standard.rs`: 标准规则实现（回合顺序、手牌限制、能量附加等）
+- `effects.rs`: 规则效果相关（待实现）
+- `validation.rs`: 规则验证相关（待实现）
 
-### 3. 事件系统模块 (src/events.rs)
+### 3. 事件系统模块 (src/events/)
 
 追踪游戏状态变化和通知：
-- `Event`: 事件特质
-- `EventHandler`: 事件处理器特质
-- `EventBus`: 事件总线，管理事件分发
-- `GameEvent`: 游戏事件枚举（新增洗牌事件等）
-- `ConsoleEventHandler`: 控制台事件处理器（示例）
+- `bus.rs`: 事件总线，管理事件分发
+- `handlers.rs`: 事件处理器实现（ConsoleEventHandler等）
+- `types.rs`: 事件类型定义（GameEvent枚举等）
 
-### 4. 效果系统模块 (src/effects.rs)
+### 4. 效果系统模块 (src/effects/)
 
 实现卡牌效果和触发器：
-- `Effect`: 效果特质，所有效果都需要实现此特质
-- `EffectManager`: 效果管理器
-- `EffectContext`: 效果上下文信息
-- `EffectTrigger`: 效果触发器枚举
-- `EffectTarget`: 效果目标枚举
-- 各种效果结果和错误类型
+- `manager.rs`: 效果管理器（EffectManager）
+- `types.rs`: 效果类型定义（Effect特质、EffectTrigger枚举、EffectTarget枚举等）
+- `targets.rs`: 效果目标相关实现
+- `outcomes.rs`: 效果结果和错误类型（待实现）
 
 ### 5. 数据模块 (src/data/)
 
@@ -147,23 +169,25 @@ ptcg-core/
 
 #### 5.1 JSON支持 (src/data/json.rs)
 - `JsonImporter`: JSON数据导入器
-- `JsonExporter`: JSON数据导出器
+- `JsonExporter`: JSON数据导出器（部分实现）
 
 #### 5.2 CSV支持 (src/data/csv.rs)
-- `CsvImporter`: CSV数据导入器
+- `CsvImporter`: CSV数据导入器（占位符）
 
 #### 5.3 数据库支持 (src/data/database.rs)
-- `DatabaseImporter`: 数据库导入器
+- `DatabaseImporter`: 数据库导入器（占位符）
 
-#### 5.4 数据模块声明 (src/data/mod.rs)
+#### 5.4 数据导入/导出 (src/data/import.rs, src/data/export.rs)
 - 通用导入/导出特质
 - 错误类型定义
-- 批量导入器
+- 批量导入器框架
 
-### 6. 网络模块 (src/network.rs)
+### 6. 网络模块 (src/network/)
 
 提供网络功能支持（需要启用async特性）：
-- 网络对战相关功能
+- `client.rs`: 网络客户端（待实现）
+- `server.rs`: 网络服务器（待实现）
+- `mod.rs`: 网络模块声明
 
 ### 7. 库入口 (src/lib.rs)
 
@@ -201,7 +225,7 @@ ptcg-core/
 6. 游戏动作应在actions.rs中实现，并在Game结构体中提供execute_action方法执行
 
 ### 测试
-每个模块都应包含相应的测试用例，放在文件末尾的tests模块中。最近添加了针对洗牌功能、游戏动作执行和穆勒规则重抽流程的测试。
+每个模块都应包含相应的测试用例，放在文件末尾的tests模块中。最近添加了针对洗牌功能、游戏动作执行和穆勒规则重抽流程的测试。使用cargo-tarpaulin检查测试覆盖率为11.79%。
 
 ## 构建和运行
 
