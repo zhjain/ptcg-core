@@ -3,9 +3,9 @@
 //! 该模块提供了一个灵活的规则系统，可以验证游戏动作、
 //! 强制执行游戏规则，并可以通过自定义规则进行扩展。
 
-use crate::core::player::PlayerId;
+use crate::core::CardId;
 use crate::core::game::state::Game;
-use crate::core::{CardId};
+use crate::core::player::PlayerId;
 use dyn_clone::DynClone;
 use serde::{Deserialize, Serialize};
 
@@ -352,8 +352,6 @@ impl Rule for EnergyAttachmentRule {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::game::state::Game;
-    use crate::core::player::Player;
 
     #[test]
     fn test_rule_engine_creation() {

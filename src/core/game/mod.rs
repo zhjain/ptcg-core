@@ -6,10 +6,10 @@
 //! - `turn`: Turn processing and flow control
 //! - `actions`: Game actions and operations
 
-pub mod state;
-pub mod setup;
-pub mod turn;
 pub mod actions;
+pub mod setup;
+pub mod state;
+pub mod turn;
 
 // Re-export the main game struct and important types
-pub use state::{Game, GameId, GamePhase, GameState, GameRules, GameEvent};
+pub use state::{Game, GameEvent, GameId, GamePhase, GameRules, GameState};

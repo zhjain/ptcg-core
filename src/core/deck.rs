@@ -43,16 +43,13 @@ pub enum DeckValidationError {
     /// Banned card in format
     BannedCard { card_name: String, format: String },
     /// Too many special cards (Prism Star, ACE SPEC, etc.)
-    TooManySpecialCards { 
-        card_type: String, 
-        count: u32, 
-        limit: u32 
+    TooManySpecialCards {
+        card_type: String,
+        count: u32,
+        limit: u32,
     },
     /// Insufficient energy count
-    InsufficientEnergy { 
-        current: u32, 
-        minimum: u32 
-    },
+    InsufficientEnergy { current: u32, minimum: u32 },
 }
 
 impl Deck {
@@ -158,18 +155,17 @@ impl Deck {
                 minimum: min_size as usize,
             });
         }
-        if let Some(max) = max_size {
-            if total > max {
+        if let Some(max) = max_size
+            && total > max {
                 errors.push(DeckValidationError::TooManyCards {
                     current: total as usize,
                     maximum: max as usize,
                 });
             }
-        }
 
         // Check for banned cards
         let banned_cards = self.get_banned_cards();
-        
+
         // Count special cards and track requirements
         let mut has_basic_pokemon = false;
         let mut energy_count = 0;
@@ -286,7 +282,7 @@ impl Deck {
                 "Forest of Giant Plants".to_string(),
             ],
             "Unlimited" => vec![], // No bans in unlimited
-            _ => vec![], // Custom format, no default bans
+            _ => vec![],           // Custom format, no default bans
         }
     }
     pub fn validate(
@@ -698,7 +694,7 @@ mod tests {
         // Add cards with insufficient energy (only 2 energy in 60 cards)
         deck.add_card(basic_id, 4);
         deck.add_card(trainer_id, 54);
-        
+
         let energy = create_test_card(
             "Lightning Energy",
             CardType::Energy {
@@ -712,9 +708,13 @@ mod tests {
 
         let result = deck.validate_advanced(&card_db);
         assert!(result.is_err());
-        
+
         if let Err(errors) = result {
-            assert!(errors.iter().any(|e| matches!(e, DeckValidationError::InsufficientEnergy { .. })));
+            assert!(
+                errors
+                    .iter()
+                    .any(|e| matches!(e, DeckValidationError::InsufficientEnergy { .. }))
+            );
         }
     }
 
@@ -724,7 +724,7 @@ mod tests {
         let mut card_db = HashMap::new();
 
         // Create a "banned" card (simulated)
-        let mut banned_card = create_test_card(
+        let banned_card = create_test_card(
             "Lysandre's Trump Card",
             CardType::Trainer {
                 trainer_type: crate::core::card::TrainerType::Item,
@@ -737,9 +737,13 @@ mod tests {
 
         let result = deck.validate_advanced(&card_db);
         assert!(result.is_err());
-        
+
         if let Err(errors) = result {
-            assert!(errors.iter().any(|e| matches!(e, DeckValidationError::BannedCard { .. })));
+            assert!(
+                errors
+                    .iter()
+                    .any(|e| matches!(e, DeckValidationError::BannedCard { .. }))
+            );
         }
     }
 }

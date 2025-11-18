@@ -75,10 +75,7 @@ pub enum ConditionEffect {
         condition: String,
     },
     /// Prevent an action
-    PreventAction {
-        pokemon_id: CardId,
-        action: String,
-    },
+    PreventAction { pokemon_id: CardId, action: String },
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SpecialCondition {
@@ -101,10 +98,7 @@ pub enum SpecialCondition {
     /// Pokemon cannot retreat
     Trapped,
     /// Custom condition with description
-    Custom {
-        name: String,
-        description: String,
-    },
+    Custom { name: String, description: String },
 }
 
 /// Represents where a card is located for a player
@@ -172,19 +166,19 @@ impl Player {
     pub fn shuffle_deck(&mut self) {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         // Simple shuffle algorithm (in a real implementation, you'd use a proper RNG)
         let mut hasher = DefaultHasher::new();
         self.id.hash(&mut hasher);
         let seed = hasher.finish();
-        
+
         // Fisher-Yates shuffle with simple PRNG
         for i in (1..self.deck.len()).rev() {
             let j = (seed.wrapping_mul(i as u64 + 1)) % (i as u64 + 1);
             self.deck.swap(i, j as usize);
         }
     }
-    
+
     /// Move a card from hand to discard pile
     pub fn discard_from_hand(&mut self, card_id: CardId) -> bool {
         if let Some(pos) = self.hand.iter().position(|&id| id == card_id) {
@@ -280,14 +274,20 @@ impl Player {
     }
 
     /// Add a special condition to a Pokemon
-    pub fn add_special_condition(&mut self, pokemon_id: CardId, condition: SpecialCondition, duration: i32, _current_turn: u32) {
+    pub fn add_special_condition(
+        &mut self,
+        pokemon_id: CardId,
+        condition: SpecialCondition,
+        duration: i32,
+        _current_turn: u32,
+    ) {
         let instance = SpecialConditionInstance {
             condition,
             duration,
             applied_turn: _current_turn,
             data: std::collections::HashMap::new(),
         };
-        
+
         self.special_conditions
             .entry(pokemon_id)
             .or_default()
@@ -296,12 +296,12 @@ impl Player {
 
     /// Add a special condition with additional data
     pub fn add_special_condition_with_data(
-        &mut self, 
-        pokemon_id: CardId, 
-        condition: SpecialCondition, 
-        duration: i32, 
+        &mut self,
+        pokemon_id: CardId,
+        condition: SpecialCondition,
+        duration: i32,
         current_turn: u32,
-        data: std::collections::HashMap<String, String>
+        data: std::collections::HashMap<String, String>,
     ) {
         let instance = SpecialConditionInstance {
             condition,
@@ -309,7 +309,7 @@ impl Player {
             applied_turn: current_turn,
             data,
         };
-        
+
         self.special_conditions
             .entry(pokemon_id)
             .or_default()
@@ -317,10 +317,15 @@ impl Player {
     }
 
     /// Remove a specific type of special condition from a Pokemon
-    pub fn remove_special_condition_type(&mut self, pokemon_id: CardId, condition_type: &SpecialCondition) {
+    pub fn remove_special_condition_type(
+        &mut self,
+        pokemon_id: CardId,
+        condition_type: &SpecialCondition,
+    ) {
         if let Some(conditions) = self.special_conditions.get_mut(&pokemon_id) {
             conditions.retain(|instance| {
-                std::mem::discriminant(&instance.condition) != std::mem::discriminant(condition_type)
+                std::mem::discriminant(&instance.condition)
+                    != std::mem::discriminant(condition_type)
             });
             if conditions.is_empty() {
                 self.special_conditions.remove(&pokemon_id);
@@ -334,12 +339,17 @@ impl Player {
     }
 
     /// Check if a Pokemon has a specific type of special condition
-    pub fn has_special_condition_type(&self, pokemon_id: CardId, condition_type: &SpecialCondition) -> bool {
+    pub fn has_special_condition_type(
+        &self,
+        pokemon_id: CardId,
+        condition_type: &SpecialCondition,
+    ) -> bool {
         self.special_conditions
             .get(&pokemon_id)
             .map(|conditions| {
                 conditions.iter().any(|instance| {
-                    std::mem::discriminant(&instance.condition) == std::mem::discriminant(condition_type)
+                    std::mem::discriminant(&instance.condition)
+                        == std::mem::discriminant(condition_type)
                 })
             })
             .unwrap_or(false)
@@ -354,12 +364,12 @@ impl Player {
     }
 
     /// Update special condition durations and apply effects
-    pub fn update_special_conditions(&mut self, current_turn: u32) -> Vec<ConditionEffect> {
+    pub fn update_special_conditions(&mut self, _current_turn: u32) -> Vec<ConditionEffect> {
         let mut effects = Vec::new();
-        
+
         for (pokemon_id, conditions) in self.special_conditions.iter_mut() {
             let mut to_remove = Vec::new();
-            
+
             for (index, condition) in conditions.iter_mut().enumerate() {
                 // Apply condition effects
                 match &condition.condition {
@@ -392,7 +402,7 @@ impl Player {
                     }
                     _ => {} // Other conditions don't have automatic effects
                 }
-                
+
                 // Update duration
                 if condition.duration > 0 {
                     condition.duration -= 1;
@@ -405,16 +415,17 @@ impl Player {
                     }
                 }
             }
-            
+
             // Remove expired conditions
             for &index in to_remove.iter().rev() {
                 conditions.remove(index);
             }
         }
-        
+
         // Clean up empty condition lists
-        self.special_conditions.retain(|_, conditions| !conditions.is_empty());
-        
+        self.special_conditions
+            .retain(|_, conditions| !conditions.is_empty());
+
         effects
     }
 
@@ -509,23 +520,27 @@ impl Player {
     /// Find all basic Pokemon cards in the player's hand
     pub fn find_basic_pokemon_in_hand(&self, card_database: &HashMap<CardId, Card>) -> Vec<CardId> {
         let mut basic_pokemon = Vec::new();
-        
+
         for &card_id in &self.hand {
             if let Some(card) = card_database.get(&card_id) {
                 // 检查是否是宝可梦卡并且是基础阶段
-                if let CardType::Pokemon { stage: EvolutionStage::Basic, .. } = card.card_type {
+                if let CardType::Pokemon {
+                    stage: EvolutionStage::Basic,
+                    ..
+                } = card.card_type
+                {
                     basic_pokemon.push(card_id);
                 }
             }
         }
-        
+
         basic_pokemon
     }
 
     /// 从牌库顶部抽取指定数量的卡牌作为奖赏卡
     pub fn draw_prize_cards(&mut self, count: usize) -> Vec<CardId> {
         let mut prize_cards = Vec::new();
-        
+
         for _ in 0..count {
             if let Some(card_id) = self.deck.pop() {
                 prize_cards.push(card_id);
@@ -533,31 +548,34 @@ impl Player {
                 break;
             }
         }
-        
+
         prize_cards
     }
 
     /// 获取指定宝可梦的附加能量类型列表
-    /// 
+    ///
     /// # 参数
     /// * `pokemon_id` - 宝可梦的ID
     /// * `card_database` - 卡牌数据库，用于查找能量卡的类型
-    /// 
+    ///
     /// # 返回值
     /// 返回附加到该宝可梦的所有能量类型的列表
-    pub fn get_attached_energy_types(&self, pokemon_id: CardId, card_database: &std::collections::HashMap<CardId, Card>) -> Vec<crate::core::card::EnergyType> {
+    pub fn get_attached_energy_types(
+        &self,
+        pokemon_id: CardId,
+        card_database: &std::collections::HashMap<CardId, Card>,
+    ) -> Vec<crate::core::card::EnergyType> {
         let mut energy_types = Vec::new();
-        
+
         if let Some(energy_cards) = self.attached_energy.get(&pokemon_id) {
             for energy_id in energy_cards {
-                if let Some(energy_card) = card_database.get(energy_id) {
-                    if let Some(energy_type) = energy_card.get_energy_type() {
+                if let Some(energy_card) = card_database.get(energy_id)
+                    && let Some(energy_type) = energy_card.get_energy_type() {
                         energy_types.push(energy_type.clone());
                     }
-                }
             }
         }
-        
+
         energy_types
     }
 }
@@ -632,11 +650,27 @@ mod tests {
         let mut player = Player::new("Test Player".to_string());
         let pokemon_id = Uuid::new_v4();
 
-        player.add_special_condition(pokemon_id, SpecialCondition::Poisoned { damage_per_turn: 10 }, -1, 1);
-        assert!(player.has_special_condition_type(pokemon_id, &SpecialCondition::Poisoned { damage_per_turn: 0 }));
+        player.add_special_condition(
+            pokemon_id,
+            SpecialCondition::Poisoned {
+                damage_per_turn: 10,
+            },
+            -1,
+            1,
+        );
+        assert!(player.has_special_condition_type(
+            pokemon_id,
+            &SpecialCondition::Poisoned { damage_per_turn: 0 }
+        ));
 
-        player.remove_special_condition_type(pokemon_id, &SpecialCondition::Poisoned { damage_per_turn: 0 });
-        assert!(!player.has_special_condition_type(pokemon_id, &SpecialCondition::Poisoned { damage_per_turn: 0 }));
+        player.remove_special_condition_type(
+            pokemon_id,
+            &SpecialCondition::Poisoned { damage_per_turn: 0 },
+        );
+        assert!(!player.has_special_condition_type(
+            pokemon_id,
+            &SpecialCondition::Poisoned { damage_per_turn: 0 }
+        ));
     }
 
     #[test]
@@ -650,14 +684,18 @@ mod tests {
         assert!(!player.can_pokemon_attack(pokemon_id));
 
         // After one turn update
-        let effects = player.update_special_conditions(2);
+        let _effects = player.update_special_conditions(2);
         assert!(player.has_special_condition_type(pokemon_id, &SpecialCondition::Paralyzed));
 
         // After second turn update (should be removed)
         let effects = player.update_special_conditions(3);
         assert!(!player.has_special_condition_type(pokemon_id, &SpecialCondition::Paralyzed));
         assert!(player.can_pokemon_attack(pokemon_id));
-        assert!(effects.iter().any(|e| matches!(e, ConditionEffect::ConditionRemoved { .. })));
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, ConditionEffect::ConditionRemoved { .. }))
+        );
     }
 
     #[test]
@@ -666,10 +704,21 @@ mod tests {
         let pokemon_id = Uuid::new_v4();
 
         // Add poison condition
-        player.add_special_condition(pokemon_id, SpecialCondition::Poisoned { damage_per_turn: 20 }, -1, 1);
-        
+        player.add_special_condition(
+            pokemon_id,
+            SpecialCondition::Poisoned {
+                damage_per_turn: 20,
+            },
+            -1,
+            1,
+        );
+
         let effects = player.update_special_conditions(2);
-        assert!(effects.iter().any(|e| matches!(e, ConditionEffect::Damage { amount: 20, .. })));
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, ConditionEffect::Damage { amount: 20, .. }))
+        );
     }
 
     #[test]
@@ -684,7 +733,7 @@ mod tests {
         player.add_special_condition(pokemon_id, SpecialCondition::Paralyzed, -1, 1);
         assert!(!player.can_pokemon_attack(pokemon_id));
 
-        // Add sleep 
+        // Add sleep
         player.clear_special_conditions(pokemon_id);
         player.add_special_condition(pokemon_id, SpecialCondition::Asleep, -1, 1);
         assert!(!player.can_pokemon_attack(pokemon_id));
@@ -709,39 +758,46 @@ mod tests {
         let pokemon_id = Uuid::new_v4();
 
         // Add multiple conditions
-        player.add_special_condition(pokemon_id, SpecialCondition::Poisoned { damage_per_turn: 10 }, -1, 1);
+        player.add_special_condition(
+            pokemon_id,
+            SpecialCondition::Poisoned {
+                damage_per_turn: 10,
+            },
+            -1,
+            1,
+        );
         player.add_special_condition(pokemon_id, SpecialCondition::Confused, 3, 1);
-        
+
         let conditions = player.get_special_conditions(pokemon_id);
         assert_eq!(conditions.len(), 2);
 
         // Can still attack with poison and confusion
         assert!(player.can_pokemon_attack(pokemon_id));
-        
+
         // But cannot with paralysis
         player.add_special_condition(pokemon_id, SpecialCondition::Paralyzed, 1, 1);
         assert!(!player.can_pokemon_attack(pokemon_id));
     }
-    
+
     #[test]
     fn test_shuffle_deck() {
         let mut player = Player::new("Test Player".to_string());
         let card_ids: Vec<CardId> = (0..10).map(|_| Uuid::new_v4()).collect();
         player.set_deck(card_ids.clone());
-        
+
         // Save the original order
         let original_order = player.deck.clone();
-        
+
         // Shuffle the deck
         player.shuffle_deck();
-        
+
         // Deck should still have the same cards
         assert_eq!(player.deck.len(), 10);
-        
+
         // Order should be different (with high probability)
         // Note: There's a tiny chance the shuffle results in the same order
         assert_eq!(player.deck.iter().count(), original_order.iter().count());
-        
+
         // All original cards should still be present
         for card_id in &card_ids {
             assert!(player.deck.contains(card_id));

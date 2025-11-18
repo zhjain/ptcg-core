@@ -272,7 +272,7 @@ impl Game {
             if let Some(player) = self.players.get(&player_id) {
                 let basic_pokemon = player.find_basic_pokemon_in_hand(&self.card_database);
                 if basic_pokemon.is_empty() {
-                    if player_without_basic_pokemon == None {
+                    if player_without_basic_pokemon.is_none() {
                         player_without_basic_pokemon = Some(player_id);
                     } else {
                         all_without_basic = true;
@@ -495,7 +495,10 @@ impl Game {
 
     /// 宣告没有基础宝可梦并执行穆勒规则重抽流程
     /// 这个方法会打印双方手牌，让对手确认
-    pub fn declare_and_perform_mulligan(&mut self, player_id: PlayerId) -> Result<MulliganResult, String> {
+    pub fn declare_and_perform_mulligan(
+        &mut self,
+        player_id: PlayerId,
+    ) -> Result<MulliganResult, String> {
         // 检查当前是否处于设置阶段
         if self.state != GameState::Setup {
             return Err("Can only declare mulligan during setup phase".to_string());
@@ -511,7 +514,7 @@ impl Game {
         self.print_player_hand(player_id)?;
 
         // 打印对手手牌
-        for (&id, _player) in &self.players {
+        for &id in self.players.keys() {
             if id != player_id {
                 println!("Opponent's hand:");
                 self.print_player_hand(id)?;

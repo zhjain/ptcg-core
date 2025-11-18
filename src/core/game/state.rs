@@ -266,7 +266,6 @@ impl Default for Game {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use uuid::Uuid;
 
     #[test]
     fn test_game_creation() {
@@ -285,35 +284,35 @@ mod tests {
             turn_time_limit: Some(50),
             auto_shuffle: false,
         };
-        
+
         let game = Game::with_rules(rules.clone());
         assert_eq!(game.rules, rules);
     }
-    
+
     #[test]
     fn test_add_player() {
         let mut game = Game::new();
         let player = Player::new("Alice".to_string());
         let player_id = player.id;
         assert!(game.add_player(player).is_ok());
-        
+
         assert!(game.players.contains_key(&player_id));
         assert_eq!(game.players.get(&player_id).unwrap().name, "Alice");
     }
-    
+
     #[test]
     fn test_set_turn_order() {
         let mut game = Game::new();
         let player1 = Player::new("Alice".to_string());
-        let player1_id = player1.id;
+        let _player1_id = player1.id;
         let player2 = Player::new("Bob".to_string());
-        let player2_id = player2.id;
-        
+        let _player2_id = player2.id;
+
         assert!(game.add_player(player1).is_ok());
         assert!(game.add_player(player2).is_ok());
-        
+
         assert!(game.determine_turn_order().is_ok());
-        
+
         assert_eq!(game.turn_order.len(), 2);
         assert_eq!(game.current_player_index, 0);
     }

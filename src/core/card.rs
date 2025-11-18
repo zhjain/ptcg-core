@@ -116,7 +116,10 @@ pub struct Attack {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DamageMode {
     /// Damage based on number of energy attached
-    PerEnergy { per_energy: u32, energy_type: Option<EnergyType> },
+    PerEnergy {
+        per_energy: u32,
+        energy_type: Option<EnergyType>,
+    },
     /// Damage based on coin flips
     CoinFlip { per_heads: u32, flips: u32 },
     /// Damage based on Pokemon in specific locations
@@ -246,7 +249,7 @@ impl Attack {
     /// Calculate the actual damage this attack would deal
     pub fn calculate_damage(&self, energy_count: u32, coin_results: &[bool]) -> u32 {
         let mut total_damage = self.damage;
-        
+
         if let Some(ref mode) = self.damage_mode {
             match mode {
                 DamageMode::PerEnergy { per_energy, .. } => {
@@ -265,7 +268,7 @@ impl Attack {
                 }
             }
         }
-        
+
         total_damage
     }
 }
@@ -383,7 +386,9 @@ impl Card {
     }
 
     /// 计算能量类型计数
-    fn count_energy_types(energy_list: &[crate::core::card::EnergyType]) -> std::collections::HashMap<crate::core::card::EnergyType, usize> {
+    fn count_energy_types(
+        energy_list: &[crate::core::card::EnergyType],
+    ) -> std::collections::HashMap<crate::core::card::EnergyType, usize> {
         let mut counts = std::collections::HashMap::new();
         for energy_type in energy_list {
             *counts.entry(energy_type.clone()).or_insert(0) += 1;
@@ -392,13 +397,16 @@ impl Card {
     }
 
     /// 获取满足能量需求的攻击数组
-    /// 
+    ///
     /// # 参数
     /// * `attached_energy` - 附加到宝可梦的能量类型列表
-    /// 
+    ///
     /// # 返回值
     /// 返回可以使用的攻击列表及其索引
-    pub fn get_usable_attacks(&self, attached_energy: &[crate::core::card::EnergyType]) -> Vec<(usize, &Attack)> {
+    pub fn get_usable_attacks(
+        &self,
+        attached_energy: &[crate::core::card::EnergyType],
+    ) -> Vec<(usize, &Attack)> {
         if !self.is_pokemon() {
             return Vec::new();
         }
@@ -408,7 +416,7 @@ impl Card {
 
         for (index, attack) in self.attacks.iter().enumerate() {
             let required_counts = Self::count_energy_types(&attack.cost);
-            
+
             let mut can_use = true;
             for (energy_type, &required_count) in &required_counts {
                 let attached_count = attached_counts.get(energy_type).cloned().unwrap_or(0);
@@ -513,17 +521,16 @@ mod tests {
         assert_eq!(pikachu.attacks.len(), 1);
         assert_eq!(pikachu.attacks[0].name, "Thundershock");
         assert_eq!(pikachu.attacks[0].status_effects.len(), 1);
-        assert_eq!(pikachu.attacks[0].status_effects[0].condition, StatusCondition::Paralysis);
+        assert_eq!(
+            pikachu.attacks[0].status_effects[0].condition,
+            StatusCondition::Paralysis
+        );
     }
 
     #[test]
     fn test_attack_simple_constructor() {
-        let attack = Attack::simple(
-            "Quick Attack".to_string(),
-            vec![EnergyType::Colorless],
-            20,
-        );
-        
+        let attack = Attack::simple("Quick Attack".to_string(), vec![EnergyType::Colorless], 20);
+
         assert_eq!(attack.name, "Quick Attack");
         assert_eq!(attack.damage, 20);
         assert_eq!(attack.status_effects.len(), 0);
@@ -539,7 +546,7 @@ mod tests {
             StatusCondition::Poison,
             75,
         );
-        
+
         assert_eq!(attack.name, "Poison Sting");
         assert_eq!(attack.damage, 10);
         assert_eq!(attack.status_effects.len(), 1);
@@ -556,10 +563,10 @@ mod tests {
             20,
             2,
         );
-        
+
         assert_eq!(attack.name, "Double Slap");
         assert_eq!(attack.damage, 0);
-        
+
         if let Some(DamageMode::CoinFlip { per_heads, flips }) = &attack.damage_mode {
             assert_eq!(*per_heads, 20);
             assert_eq!(*flips, 2);
@@ -571,13 +578,9 @@ mod tests {
     #[test]
     fn test_damage_calculation() {
         // Test fixed damage
-        let simple_attack = Attack::simple(
-            "Tackle".to_string(),
-            vec![EnergyType::Colorless],
-            30,
-        );
+        let simple_attack = Attack::simple("Tackle".to_string(), vec![EnergyType::Colorless], 30);
         assert_eq!(simple_attack.calculate_damage(0, &[]), 30);
-        
+
         // Test coin flip damage
         let coin_attack = Attack::coin_flip_damage(
             "Double Slap".to_string(),
@@ -603,7 +606,7 @@ mod tests {
             StatusCondition::Sleep,
             StatusCondition::Confusion,
         ];
-        
+
         for condition in conditions {
             let effect = StatusEffect {
                 condition: condition.clone(),
@@ -623,13 +626,10 @@ mod tests {
             AttackTargetType::Bench,
             AttackTargetType::Self_,
         ];
-        
+
         for target in targets {
-            let mut attack = Attack::simple(
-                "Test Attack".to_string(),
-                vec![EnergyType::Colorless],
-                10,
-            );
+            let mut attack =
+                Attack::simple("Test Attack".to_string(), vec![EnergyType::Colorless], 10);
             attack.set_target_type(target.clone());
             assert_eq!(attack.target_type, target);
         }
