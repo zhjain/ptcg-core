@@ -1,7 +1,6 @@
 //! Game action execution
 
 use crate::core::game::state::{Game, GameEvent};
-use crate::core::player::PlayerId;
 
 impl Game {
     /// Execute a game action using the provided rule engine

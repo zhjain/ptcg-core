@@ -53,7 +53,6 @@ impl AttachEnergyAction {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_energy_actions_module() {

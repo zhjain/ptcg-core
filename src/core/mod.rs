@@ -15,7 +15,6 @@ pub use player::*;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_core_module_structure() {

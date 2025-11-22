@@ -166,7 +166,6 @@ impl Effect for DamageEffect {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_effect_manager_structure() {

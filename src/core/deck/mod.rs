@@ -11,7 +11,6 @@ pub use validation::*;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_deck_module_structure() {

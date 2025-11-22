@@ -9,8 +9,8 @@
 use ptcg_core::core::card::{
     AttackTargetType, CardId, EvolutionStage, EnergyType, CardType, CardRarity,
 };
-use ptcg_core::core::player::SpecialCondition;
-use ptcg_core::events::{ConsoleEventHandler, GameEvent};
+// use ptcg_core::core::player::SpecialCondition;
+// use ptcg_core::events::{ConsoleEventHandler, GameEvent};
 use ptcg_core::rules::GameAction;
 use ptcg_core::*;
 use std::collections::HashMap;

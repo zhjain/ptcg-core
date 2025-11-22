@@ -1,7 +1,6 @@
 //! 宝可梦卡牌特定功能
 
 use crate::core::card::{Attack, Ability, CardId, CardType, CardRarity, EnergyType};
-use crate::core::card::attacks::AttackTargetType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -161,7 +160,7 @@ impl Card {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::card::{Attack, Ability, EvolutionStage};
+    use crate::core::card::{Attack, EvolutionStage};
 
     #[test]
     fn test_create_pokemon_card() {
@@ -213,7 +212,7 @@ mod tests {
 
     #[test]
     fn test_add_attack_to_pokemon() {
-        let mut card_type = CardType::Pokemon {
+        let card_type = CardType::Pokemon {
             species: "Pikachu".to_string(),
             hp: 60,
             retreat_cost: 1,

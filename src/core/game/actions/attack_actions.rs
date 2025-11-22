@@ -63,7 +63,6 @@ impl AttackAction {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_attack_actions_module() {

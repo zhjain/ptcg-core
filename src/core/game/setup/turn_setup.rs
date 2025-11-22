@@ -1,9 +1,6 @@
 //! Turn setup functionality
 
-use crate::core::{
-    game::state::{Game, GameState},
-    player::PlayerId,
-};
+use crate::core::game::state::{Game, GameState};
 
 impl Game {
     /// 阶段1: 通过猜拳决定先后手顺序

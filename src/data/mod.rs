@@ -29,7 +29,6 @@ pub use database::*;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_data_module_structure() {

@@ -12,14 +12,11 @@ pub mod abilities;
 // 重新导出常用类型
 pub use types::*;
 pub use pokemon::*;
-pub use energy::*;
-pub use trainer::*;
 pub use attacks::*;
 pub use abilities::*;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_card_module_structure() {

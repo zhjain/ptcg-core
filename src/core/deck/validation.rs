@@ -1,6 +1,6 @@
 //! 牌组验证功能
 
-use crate::core::card::{Card, CardId, CardType, EnergyType, CardRarity, TrainerType, EvolutionStage};
+use crate::core::card::{Card, CardId, CardType, EnergyType};
 use crate::core::deck::Deck;
 use std::collections::HashMap;
 
@@ -133,7 +133,6 @@ impl Deck {
 mod tests {
     use super::*;
     use crate::core::card::{Card, CardType, EvolutionStage, EnergyType, CardRarity, TrainerType};
-    use uuid::Uuid;
 
     #[test]
     fn test_deck_statistics() {

@@ -1,7 +1,6 @@
 //! Standard PTCG rules implementation
 
 use crate::core::game::state::Game;
-use crate::core::player::PlayerId;
 use crate::rules::{Rule, RuleEngine, RuleResult, RuleViolation, ViolationSeverity, GameAction};
 
 /// Standard PTCG rules implementation

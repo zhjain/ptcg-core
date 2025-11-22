@@ -1,7 +1,6 @@
 //! Player setup functionality
 
 use crate::core::{
-    card::CardId,
     deck::Deck,
     game::state::{Game, GameState},
     player::{Player, PlayerId},

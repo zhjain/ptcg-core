@@ -11,11 +11,9 @@ pub mod outcomes;
 pub use manager::*;
 pub use types::*;
 pub use targets::*;
-pub use outcomes::*;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_effects_module_structure() {

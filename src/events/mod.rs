@@ -16,7 +16,6 @@ pub use handlers::EventHandler;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_events_module_structure() {
