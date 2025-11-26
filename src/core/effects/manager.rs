@@ -1,6 +1,6 @@
 //! Effect manager for handling all effect-related operations
 
-use crate::effects::{Effect, EffectId, EffectTarget, EffectContext, EffectOutcome, EffectError};
+use crate::core::effects::{Effect, EffectId, EffectTarget, EffectContext, EffectOutcome, EffectError};
 use crate::core::card::CardId;
 use crate::core::game::state::Game;
 use std::collections::HashMap;

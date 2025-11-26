@@ -6,6 +6,12 @@ pub mod card;
 pub mod deck;
 pub mod game;
 pub mod player;
+/// 卡牌效果系统模块
+pub mod effects;
+/// 事件系统模块
+pub mod events;
+/// 游戏规则引擎模块
+pub mod rules;
 
 // 重新导出常用类型
 pub use card::*;

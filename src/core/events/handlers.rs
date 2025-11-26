@@ -1,6 +1,6 @@
 //! Event handlers
 
-use crate::events::GameEvent;
+use crate::core::events::GameEvent;
 
 /// Trait for event handlers
 pub trait EventHandler: Send + Sync {

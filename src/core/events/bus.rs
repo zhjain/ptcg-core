@@ -1,6 +1,6 @@
 //! Event bus implementation
 
-use crate::events::{GameEvent, EventHandler};
+use crate::core::events::{GameEvent, EventHandler};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 

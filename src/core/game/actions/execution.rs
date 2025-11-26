@@ -14,9 +14,9 @@ impl Game {
     /// * `Err(Vec<RuleViolation>)` if the action violated any rules
     pub fn execute_action(
         &mut self,
-        rule_engine: &crate::rules::RuleEngine,
-        action: &crate::rules::GameAction,
-    ) -> Result<(), Vec<crate::rules::RuleViolation>> {
+        rule_engine: &crate::core::rules::RuleEngine,
+        action: &crate::core::rules::GameAction,
+    ) -> Result<(), Vec<crate::core::rules::RuleViolation>> {
         // First validate the action
         let violations = rule_engine.validate_action(self, action);
 
@@ -24,7 +24,7 @@ impl Game {
         let has_errors = violations.iter().any(|v| {
             matches!(
                 v.severity,
-                crate::rules::ViolationSeverity::Error | crate::rules::ViolationSeverity::Fatal
+                crate::core::rules::ViolationSeverity::Error | crate::core::rules::ViolationSeverity::Fatal
             )
         });
 
@@ -34,7 +34,7 @@ impl Game {
 
         // Apply the action based on its type
         match action {
-            crate::rules::GameAction::DrawCard { player_id } => {
+            crate::core::rules::GameAction::DrawCard { player_id } => {
                 if let Some(player) = self.players.get_mut(player_id) {
                     if let Some(card_id) = player.draw_card() {
                         self.add_event(GameEvent::CardDrawn {
@@ -49,7 +49,7 @@ impl Game {
                     }
                 }
             }
-            crate::rules::GameAction::PlayCard {
+            crate::core::rules::GameAction::PlayCard {
                 player_id,
                 card_id,
                 target: _,
@@ -60,7 +60,7 @@ impl Game {
                     card_id: *card_id,
                 });
             }
-            crate::rules::GameAction::AttachEnergy {
+            crate::core::rules::GameAction::AttachEnergy {
                 player_id,
                 energy_id,
                 pokemon_id,
@@ -74,7 +74,7 @@ impl Game {
                         });
                     }
             }
-            crate::rules::GameAction::UseAttack {
+            crate::core::rules::GameAction::UseAttack {
                 player_id,
                 pokemon_id,
                 attack_index,
@@ -86,13 +86,13 @@ impl Game {
                     attack_name: format!("Attack {}", attack_index),
                 });
             }
-            crate::rules::GameAction::Retreat {
+            crate::core::rules::GameAction::Retreat {
                 player_id: _,
                 pokemon_id: _,
             } => {
                 // TODO: Implement retreat logic
             }
-            crate::rules::GameAction::EndTurn { player_id } => {
+            crate::core::rules::GameAction::EndTurn { player_id } => {
                 self.add_event(GameEvent::TurnEnded {
                     player_id: *player_id,
                 });
@@ -104,7 +104,7 @@ impl Game {
                     player.start_turn();
                 }
             }
-            crate::rules::GameAction::Pass { player_id: _ } => {
+            crate::core::rules::GameAction::Pass { player_id: _ } => {
                 // TODO: Implement pass logic
             }
         }

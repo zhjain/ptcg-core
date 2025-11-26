@@ -33,12 +33,7 @@
 pub mod core;
 /// 数据导入和管理模块
 pub mod data;
-/// 卡牌效果系统模块
-pub mod effects;
-/// 事件系统模块
-pub mod events;
-/// 游戏规则引擎模块
-pub mod rules;
+
 /// 网络功能模块（需要async特性）
 #[cfg(feature = "async")]
 pub mod network;
@@ -47,15 +42,15 @@ pub mod network;
 pub use core::{
     card::{Ability, Attack, Card, CardRarity, CardType, EnergyType},
     deck::{Deck, DeckValidationError},
+    effects::{
+        Effect, EffectContext, EffectError, EffectId, EffectOutcome, EffectTarget, EffectTrigger,
+        TargetRequirement,
+    },
+    events::{EventBus, EventHandler, GameEvent},
     game::{Game, GamePhase, GameRules, GameState},
-    player::{Player, PlayerId, SpecialCondition, CardLocation, SpecialConditionInstance},
+    player::{CardLocation, Player, PlayerId, SpecialCondition, SpecialConditionInstance},
+    rules::{Rule, RuleEngine, StandardRules},
 };
-
-pub use rules::{Rule, RuleEngine, StandardRules};
-
-pub use events::{GameEvent, EventBus, EventHandler};
-
-pub use effects::{Effect, EffectTarget, EffectTrigger, TargetRequirement, EffectId, EffectContext, EffectOutcome, EffectError};
 
 #[cfg(feature = "json")]
 pub use data::json::JsonImporter;

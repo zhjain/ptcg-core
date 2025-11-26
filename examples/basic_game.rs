@@ -11,7 +11,7 @@ use ptcg_core::core::card::{
 };
 // use ptcg_core::core::player::SpecialCondition;
 // use ptcg_core::events::{ConsoleEventHandler, GameEvent};
-use ptcg_core::rules::GameAction;
+use ptcg_core::core::rules::GameAction;
 use ptcg_core::*;
 use std::collections::HashMap;
 

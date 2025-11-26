@@ -1,7 +1,7 @@
 //! Standard PTCG rules implementation
 
 use crate::core::game::state::Game;
-use crate::rules::{Rule, RuleEngine, RuleResult, RuleViolation, ViolationSeverity, GameAction};
+use crate::core::rules::{Rule, RuleEngine, RuleResult, RuleViolation, ViolationSeverity, GameAction};
 
 /// Standard PTCG rules implementation
 pub struct StandardRules;
