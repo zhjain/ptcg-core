@@ -40,11 +40,11 @@ pub mod network;
 
 // 重新导出常用类型
 pub use core::{
-    card::{Ability, Attack, Card, CardRarity, CardType, EnergyType},
+    card::{Ability, Attack, Card, CardRarity, CardType, EnergyType, TrainerType},
     deck::{Deck, DeckValidationError},
     effects::{
         Effect, EffectContext, EffectError, EffectId, EffectOutcome, EffectTarget, EffectTrigger,
-        TargetRequirement,
+        TargetRequirement, PokemonAbilityEffect, PokemonAttackEffect, TrainerEffect, SpecialEnergyEffect, AbilityType
     },
     events::{EventBus, EventHandler, GameEvent},
     game::{Game, GamePhase, GameRules, GameState},

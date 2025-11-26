@@ -1,4 +1,4 @@
-//! Effect types and traits
+//! 效果类型和特征
 
 use crate::core::card::CardId;
 use crate::core::game::state::Game;
@@ -9,96 +9,166 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-/// Unique identifier for an effect
+/// 效果的唯一标识符
 pub type EffectId = Uuid;
 
-/// Trait for implementing card effects
+/// 不同的能力类型
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AbilityType {
+    /// 主动能力 - 玩家可以激活它
+    Active,
+    /// 被动能力 - 自动激活
+    Passive,
+    /// 宝可梦之力 - 每回合一次的能力（旧卡牌）
+    PokePower,
+    /// 宝可梦之身 - 总是激活的能力（旧卡牌）
+    PokeBody,
+}
+
+/// 效果类型枚举
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EffectType {
+    /// 伤害效果
+    Damage { amount: u32 },
+    /// 治疗效果
+    Heal { amount: u32 },
+    /// 状态效果
+    Status { condition: String, probability: u32 },
+    /// 抽卡效果
+    Draw { count: u32 },
+    /// 能量附加效果
+    AttachEnergy { energy_type: String },
+    /// 特殊条件应用效果
+    ApplySpecialCondition { condition: String },
+    /// 自定义效果
+    Custom { logic: String },
+}
+
+/// 实现卡牌效果的特征
 pub trait Effect: DynClone + Send + Sync {
-    /// Get the effect's unique identifier
+    /// 获取效果的唯一标识符
     fn id(&self) -> EffectId;
 
-    /// Get the effect's name
+    /// 获取效果的名称
     fn name(&self) -> &str;
 
-    /// Get the effect's description
+    /// 获取效果的描述
     fn description(&self) -> &str;
 
-    /// Check if this effect can be applied in the current game state
+    /// 检查此效果是否可以在当前游戏状态下应用
     fn can_apply(&self, game: &Game, context: &EffectContext) -> bool;
 
-    /// Apply the effect to the game state
+    /// 将效果应用于游戏状态
     fn apply(&self, game: &mut Game, context: &EffectContext) -> EffectResult;
 
-    /// Get the effect's trigger conditions
+    /// 获取效果的触发条件
     fn triggers(&self) -> Vec<EffectTrigger>;
 
-    /// Get the effect's target requirements
+    /// 获取效果的目标要求
     fn target_requirements(&self) -> Vec<TargetRequirement>;
+    
+    /// 当效果附加到卡牌时调用
+    fn on_attach(&self, _game: &mut Game, _card_id: CardId) -> EffectResult {
+        Ok(vec![])
+    }
+    
+    /// 当效果从卡牌上移除时调用
+    fn on_detach(&self, _game: &mut Game, _card_id: CardId) -> EffectResult {
+        Ok(vec![])
+    }
+    
+    /// 在每回合开始时调用
+    fn on_turn_start(&self, _game: &mut Game, _player_id: PlayerId) -> EffectResult {
+        Ok(vec![])
+    }
+    
+    /// 在每回合结束时调用
+    fn on_turn_end(&self, _game: &mut Game, _player_id: PlayerId) -> EffectResult {
+        Ok(vec![])
+    }
 }
 
 dyn_clone::clone_trait_object!(Effect);
 
-/// Context information for effect application
+/// 效果应用的上下文信息
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EffectContext {
-    /// The card that owns this effect
+    /// 拥有此效果的卡牌
     pub source_card: CardId,
-    /// The player who controls the source card
+    /// 控制源卡牌的玩家
     pub controller: PlayerId,
-    /// The target of the effect (if any)
+    /// 效果的目标（如果有）
     pub target: Option<EffectTarget>,
-    /// Additional parameters for the effect
+    /// 效果的附加参数
     pub parameters: HashMap<String, String>,
-    /// The trigger that caused this effect to activate
+    /// 触发此效果激活的触发器
     pub trigger: Option<EffectTrigger>,
 }
 
-/// Result of applying an effect
+/// 应用效果的结果
 pub type EffectResult = Result<Vec<EffectOutcome>, EffectError>;
 
-/// Possible outcomes of an effect
+/// 效果的可能结果
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EffectOutcome {
-    /// Damage was dealt
+    /// 造成了伤害
     DamageDealt { target: CardId, amount: u32 },
-    /// Healing was applied
+    /// 应用了治疗
     Healing { target: CardId, amount: u32 },
-    /// Cards were drawn
+    /// 抽取了卡牌
     CardsDrawn { player: PlayerId, count: u32 },
-    /// Energy was attached
+    /// 附加了能量
     EnergyAttached { energy: CardId, target: CardId },
-    /// A card was moved
+    /// 移动了卡牌
     CardMoved {
         card: CardId,
         from: String,
         to: String,
     },
-    /// A special condition was applied
+    /// 应用了特殊状态
     SpecialConditionApplied { target: CardId, condition: String },
-    /// A special condition was removed
+    /// 移除了特殊状态
     SpecialConditionRemoved { target: CardId, condition: String },
-    /// Custom effect outcome
+    /// 自定义效果结果
     Custom {
         description: String,
         data: HashMap<String, String>,
     },
 }
 
-/// Errors that can occur when applying effects
+/// 应用效果时可能发生的错误
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EffectError {
-    /// Invalid target for the effect
+    /// 效果的目标无效
     InvalidTarget { reason: String },
-    /// Insufficient resources (energy, cards, etc.)
+    /// 资源不足（能量、卡牌等）
     InsufficientResources {
         resource: String,
         required: u32,
         available: u32,
     },
-    /// Effect cannot be applied due to game state
+    /// 由于游戏状态无法应用效果
     InvalidGameState { reason: String },
-    /// Effect requirements not met
+    /// 未满足效果要求
     RequirementsNotMet { requirement: String },
-    /// General effect error
+    /// 一般效果错误
     General { message: String },
+}
+
+/// 所有效果实现的基础结构
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BaseEffect {
+    pub id: EffectId,
+    pub name: String,
+    pub description: String,
+}
+
+impl BaseEffect {
+    pub fn new(name: String, description: String) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name,
+            description,
+        }
+    }
 }

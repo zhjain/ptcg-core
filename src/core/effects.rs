@@ -6,11 +6,17 @@ pub mod manager;
 pub mod types;
 pub mod targets;
 pub mod outcomes;
+pub mod pokemon_effects;
+pub mod trainer_effects;
+pub mod energy_effects;
 
 // 重新导出常用类型
 pub use manager::*;
 pub use types::*;
 pub use targets::*;
+pub use pokemon_effects::*;
+pub use trainer_effects::*;
+pub use energy_effects::*;
 
 #[cfg(test)]
 mod tests {

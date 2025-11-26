@@ -74,7 +74,7 @@ pub enum EvolutionStage {
 pub enum TrainerType {
     Item,      // 道具
     Supporter, // 支援者
-    Stadium,   // 体育场
+    Stadium,   // 竞技场
     Tool,      // 工具
 }
 

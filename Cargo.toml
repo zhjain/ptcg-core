@@ -38,3 +38,11 @@ full = ["json", "csv_import", "database", "async"]
 
 [dev-dependencies]
 tokio-test = "0.4"
+
+[[bin]]
+name = "basic_game"
+path = "examples/basic_game.rs"
+
+[[bin]]
+name = "effects_demo"
+path = "examples/effects_demo.rs"
